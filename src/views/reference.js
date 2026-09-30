@@ -1,7 +1,7 @@
 // Referência: o modelo de resposta a incidentes da SP 800-61 Rev. 3.
 import { html, raw } from '../core/util.js';
-import { FUNCTIONS, CATEGORIES, SUBCATEGORIES } from '../core/nist.js';
-import { fnBadge } from '../ui.js';
+import { FUNCTIONS, CATEGORIES, SUBCATEGORIES, NIST_LINKS } from '../core/nist.js';
+import { fnBadge, ic } from '../ui.js';
 
 const fn = (id) => FUNCTIONS.find((f) => f.id === id);
 
@@ -28,6 +28,15 @@ export default {
       <h1>NIST SP 800-61 Revision 3</h1>
       <p class="lead"><em>Incident Response Recommendations and Considerations for Cybersecurity Risk Management: A CSF 2.0 Community Profile</em> (abril de 2025). A Rev. 3 substitui a Rev. 2 (2012) e integra a resposta a incidentes à gestão de risco de cibersegurança da organização, usando as seis Funções do NIST Cybersecurity Framework 2.0.</p>
 
+      <div class="doclinks">
+        <a class="doclink primary" href="${NIST_LINKS.pdf}" target="_blank" rel="noopener">${ic('file')}<span><b>NIST SP 800-61 Rev. 3 — PDF oficial</b><small>nvlpubs.nist.gov · abril/2025</small></span>${ic('ext')}</a>
+        <a class="doclink" href="${NIST_LINKS.pub}" target="_blank" rel="noopener">${ic('info')}<span><b>Página da publicação (CSRC)</b><small>resumo, errata, material complementar</small></span>${ic('ext')}</a>
+        <a class="doclink" href="${NIST_LINKS.csfPdf}" target="_blank" rel="noopener">${ic('file')}<span><b>NIST CSF 2.0 — PDF oficial</b><small>NIST CSWP 29 · fevereiro/2024</small></span>${ic('ext')}</a>
+        <a class="doclink" href="${NIST_LINKS.csf}" target="_blank" rel="noopener">${ic('layers')}<span><b>Cybersecurity Framework</b><small>nist.gov/cyberframework</small></span>${ic('ext')}</a>
+        <a class="doclink" href="${NIST_LINKS.rev2}" target="_blank" rel="noopener">${ic('book')}<span><b>SP 800-61 Rev. 2 (substituída)</b><small>referência histórica, 2012</small></span>${ic('ext')}</a>
+        <a class="doclink" href="${NIST_LINKS.anpd}" target="_blank" rel="noopener">${ic('shield')}<span><b>ANPD — Incidente de segurança</b><small>comunicação de incidentes (LGPD)</small></span>${ic('ext')}</a>
+      </div>
+
       <section class="card"><h2>Modelo de ciclo de vida</h2>${raw(diagram())}
         <p>Em vez das quatro fases lineares da Rev. 2 (preparação; detecção e análise; contenção, erradicação e recuperação; atividade pós-incidente), a Rev. 3 descreve:</p>
         <ul>
@@ -40,7 +49,7 @@ export default {
       <section class="card"><h2>Como a plataforma aplica a Rev. 3</h2>
         <div class="table-wrap"><table class="tbl"><thead><tr><th>Função</th><th>Na Blade</th></tr></thead><tbody>
           <tr><td>${fnBadge('GV')}</td><td>Papéis e responsabilidades (Equipe), políticas de SLA e critérios, regras de notificação, supervisão pelo painel e auditoria.</td></tr>
-          <tr><td>${fnBadge('ID')}</td><td>Inventário e criticidade de ativos, avaliação de prontidão, exercícios (ID.IM-02), lições aprendidas e backlog de melhorias (ID.IM).</td></tr>
+          <tr><td>${fnBadge('ID')}</td><td>Catálogo de tecnologias, processos e procedimentos, inventário e criticidade de ativos, avaliação de prontidão, exercícios (ID.IM-02), lições aprendidas e backlog de melhorias (ID.IM).</td></tr>
           <tr><td>${fnBadge('PR')}</td><td>Avaliação de salvaguardas (identidade, conscientização, backups, logs, resiliência) e melhorias direcionadas.</td></tr>
           <tr><td>${fnBadge('DE')}</td><td>Fila de eventos adversos, correlação, CTI e declaração por critérios definidos (DE.AE-08).</td></tr>
           <tr><td>${fnBadge('RS')}</td><td>Triagem, priorização e escalonamento; análise, causa raiz e magnitude; linha do tempo encadeada por hash; evidências com cadeia de custódia; contenção e erradicação; notificações e comunicação.</td></tr>
@@ -62,7 +71,7 @@ export default {
           <dt>Evento adverso</dt><dd>Evento com consequência negativa ou potencialmente negativa.</dd>
           <dt>Incidente</dt><dd>Ocorrência que coloca em risco, real ou iminente, a integridade, confidencialidade ou disponibilidade de informação ou sistema, ou que viola lei, política ou procedimento de segurança.</dd>
         </dl>
-        <p class="small muted">Resumo informativo. Consulte o documento oficial em csrc.nist.gov (NIST SP 800-61r3) e as normas aplicáveis ao seu setor.</p>
+        <p class="small muted">Resumo informativo. Consulte sempre o <a href="${NIST_LINKS.pdf}" target="_blank" rel="noopener">documento oficial</a> e as normas aplicáveis ao seu setor.</p>
       </section>
     </div>`;
   },

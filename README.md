@@ -4,6 +4,8 @@ Plataforma web de gestão completa de incidentes de cibersegurança baseada no *
 
 **Acesse:** https://rmmenezes.github.io/Blade-IncidentResponse/
 
+**Documento oficial:** [NIST SP 800-61 Rev. 3 (PDF)](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-61r3.pdf) · [página da publicação](https://csrc.nist.gov/pubs/sp/800/61/r3/final) · [NIST CSF 2.0 (PDF)](https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf)
+
 ## Modelo da Rev. 3 aplicado
 
 | Função CSF 2.0 | Na plataforma |
@@ -36,13 +38,20 @@ Plataforma web de gestão completa de incidentes de cibersegurança baseada no *
   - Lições aprendidas com roteiro de perguntas, que geram melhorias.
   - Checklist de conformidade com as subcategorias do CSF 2.0 aplicáveis ao incidente.
   - **Relatório** completo pronto para imprimir ou salvar em PDF, e exportação em JSON.
+- **Pessoas**: seletor de usuário atual, equipe atribuída por incidente, papéis (líder, tratador, jurídico/DPO…), responsáveis por tarefas e passos, tela de **Atribuições** com carga de trabalho, tarefas sem responsável e "minhas tarefas".
+- **Processos e procedimentos**: catálogo de processos de resposta (dono, entradas/saídas, versão, revisão) e **POPs passo a passo** com papel e tecnologia por passo. Aplicar um POP cria uma tarefa obrigatória com checklist, atribuída automaticamente pelo papel. Cada passo registra quem concluiu e quando.
+- **Tecnologias**: catálogo (SIEM, EDR, backup, IAM, forense…) com responsável, estado, subcategorias CSF apoiadas, **matriz de cobertura por Função** e uso nos incidentes.
+- **Controle de fases**: tarefas obrigatórias; com o bloqueio ativo, o incidente só avança quando elas estiverem concluídas.
+- **Cronologia**: barra de duração entre marcos, lista de marcos, filtros por tipo de registro, exportação CSV e anexos dentro da linha do tempo.
+- **Arquivos e imagens**: anexe arquivos arrastando, selecionando ou colando imagens (Ctrl+V). Pré-visualização de imagens, PDF e texto, com o hash SHA-256 registrado na cadeia de integridade. Os arquivos ficam no navegador (IndexedDB), **sem servidor e sem Firebase**. Para compartilhar, use o **pacote do incidente** (`.blade.json` com os arquivos) e o botão *Importar pacote*.
+- **Relatórios**: executivo, operacional e SLAs, conformidade CSF, notificações regulatórias, indicadores (IOCs), equipe e carga, tecnologias e processos, lições e melhorias, e o relatório por incidente. Todos têm filtro de período, impressão em PDF e CSV.
 - **Preparação**: avaliação de prontidão (GV/ID/PR/DE/RS/RC), equipe e contatos, inventário de ativos e exercícios.
 - **Melhorias**: backlog ligado a incidentes e às subcategorias do CSF.
 - **Auditoria**, **busca global** (tecla `/`), tema claro/escuro, layout responsivo, backup e restauração por JSON.
 
 ## Dados e privacidade
 
-É uma aplicação estática, sem servidor: os dados ficam no `localStorage` do navegador. Use **Configurações → Exportar** para fazer backup ou compartilhar. Para uso multiusuário em produção, o próximo passo é criar um backend com autenticação.
+É uma aplicação estática, sem servidor: os registros ficam no `localStorage` e os arquivos no IndexedDB do navegador. Use **Configurações → Exportar tudo + arquivos** para backup e o **pacote do incidente** para compartilhar um caso com outra pessoa. Para uso multiusuário em produção, o próximo passo é criar um backend com autenticação.
 
 ## Desenvolvimento
 

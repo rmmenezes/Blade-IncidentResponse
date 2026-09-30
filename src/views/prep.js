@@ -39,7 +39,7 @@ export default {
         ${db.contacts.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Nome</th><th>Papel</th><th>Área</th><th>Contato</th><th></th><th></th></tr></thead>
           <tbody>${db.contacts.map((c) => html`<tr><td><b>${c.name}</b></td><td>${roleById[c.role]?.name}</td><td>${c.org}</td><td>${c.email}<br><small>${c.phone}</small></td>
           <td>${c.oncall ? html`<span class="badge ok">Plantão</span>` : ''} ${c.external ? html`<span class="badge ghost">Externo</span>` : ''}</td>
-          <td class="row"><button class="btn sm ghost" data-c-edit="${c.id}">Editar</button><button class="icon-btn" data-c-del="${c.id}" aria-label="Remover">${ic('x')}</button></td></tr>`)}</tbody></table></div>` : empty('Nenhum contato cadastrado.')}
+          <td><div class="row"><button class="btn sm ghost" data-c-edit="${c.id}">Editar</button><button class="icon-btn" data-c-del="${c.id}" aria-label="Remover">${ic('x')}</button></div></td></tr>`)}</tbody></table></div>` : empty('Nenhum contato cadastrado.')}
       </section>`;
     } else if (tab === 'ativos') {
       body = html`<section class="card">
@@ -47,7 +47,7 @@ export default {
         ${db.assets.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Ativo</th><th>Tipo</th><th>Responsável</th><th>Criticidade</th><th>IP</th><th>Dados</th><th>Incidentes</th><th></th></tr></thead>
           <tbody>${db.assets.map((a) => { const n = db.incidents.filter((i) => i.assets.includes(a.id)); return html`<tr><td><b>${a.name}</b><br><small class="muted">${a.notes}</small></td><td>${a.type}</td><td>${a.owner}</td>
           <td><span class="badge crit-${a.criticality}">${a.criticality}</span></td><td class="mono">${a.ip}</td><td>${a.dataClass}</td><td>${n.map((i) => html`<a href="#/incidente/${i.id}">${i.id}</a> `)}</td>
-          <td class="row"><button class="btn sm ghost" data-a-edit="${a.id}">Editar</button><button class="icon-btn" data-a-del="${a.id}" aria-label="Remover">${ic('x')}</button></td></tr>`; })}</tbody></table></div>` : empty('Nenhum ativo cadastrado.')}
+          <td><div class="row"><button class="btn sm ghost" data-a-edit="${a.id}">Editar</button><button class="icon-btn" data-a-del="${a.id}" aria-label="Remover">${ic('x')}</button></div></td></tr>`; })}</tbody></table></div>` : empty('Nenhum ativo cadastrado.')}
       </section>`;
     } else if (tab === 'exercicios') {
       body = html`<section class="card">

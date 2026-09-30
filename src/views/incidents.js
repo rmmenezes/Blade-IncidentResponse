@@ -4,7 +4,8 @@ import { html, download, toCSV } from '../core/util.js';
 import { STATUSES, CATEGORIES_INCIDENT, TLP } from '../core/nist.js';
 import { FACTORS, SEVERITIES, computeSeverity, priorityScore, csfProgress } from '../core/engine.js';
 import { PLAYBOOKS, playbookById } from '../data/playbooks.js';
-import { ic, sevBadge, statusBadge, when, field, input, dt, textarea, select, formData, empty, bar, tlpBadge } from '../ui.js';
+import { unpackFiles } from '../core/files.js';
+import { ic, toast, confirmBox, sevBadge, statusBadge, when, field, input, dt, textarea, select, formData, empty, bar, tlpBadge } from '../ui.js';
 
 export function factorFields(inc) {
   return html`${Object.entries(FACTORS).map(([k, f]) => field(f.label, select(k, f.opts.map((t, v) => ({ v, t: `${v} — ${t}` })), inc[k] ?? 0, 'data-type="number"')))}`;
@@ -56,6 +57,7 @@ export default {
       <div class="page-head">
         <div><h1>Incidentes</h1><p class="muted">${list.length} incidente(s) no filtro atual</p></div>
         <div class="row">
+          <label class="btn" title="Importar pacote .blade.json exportado de outro navegador">${ic('upload')} Importar pacote<input type="file" accept=".json,application/json" id="pkgin" hidden></label>
           <button class="btn" data-act="csv">${ic('down')} CSV</button>
           <a class="btn primary" href="#/incidentes/novo">${ic('plus')} Declarar incidente</a>
         </div>
@@ -71,10 +73,10 @@ export default {
         return html`<div class="col"><h3>${s.name} <em>${col.length}</em></h3>${col.map((i) => html`<a class="bcard sevl-${i.severity}" href="#/incidente/${i.id}">
           <span class="mono small">${i.id}</span><strong>${i.title}</strong><span class="row">${sevBadge(i.severity)}</span><small class="muted">${i.category}</small></a>`)}</div>`;
       })}</div>` : html`<div class="card"><div class="table-wrap"><table class="tbl">
-        <thead><tr><th>ID</th><th>Título</th><th>Categoria</th><th>Severidade</th><th>Estado</th><th>TLP</th><th>CSF</th><th>Declarado</th></tr></thead>
+        <thead><tr><th>ID</th><th>Título</th><th>Categoria</th><th>Severidade</th><th>Estado</th><th>Líder</th><th>TLP</th><th>CSF</th><th>Declarado</th></tr></thead>
         <tbody>${list.map((i) => { const p = csfProgress(i); return html`<tr>
           <td><a href="#/incidente/${i.id}">${i.id}</a></td><td>${i.title}</td><td>${i.category}</td><td>${sevBadge(i.severity)}</td>
-          <td>${statusBadge(i.status)}</td><td>${tlpBadge(i.tlp)}</td><td style="min-width:90px">${bar(p.pct)}</td><td>${when(i.declaredAt)}</td></tr>`; })}</tbody>
+          <td>${statusBadge(i.status)}</td><td>${db.contacts.find((c) => c.id === i.roles.lead)?.name || '—'}</td><td>${tlpBadge(i.tlp)}</td><td style="min-width:90px">${bar(p.pct)}</td><td>${when(i.declaredAt)}</td></tr>`; })}</tbody>
       </table></div></div>`}
     </div>`;
   },
@@ -105,6 +107,22 @@ export default {
       s.value ? n.set(s.dataset.filter, s.value) : n.delete(s.dataset.filter);
       ctx.go(`#/incidentes?${n}`);
     }));
+    el.querySelector('#pkgin')?.addEventListener('change', async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      try {
+        const pkg = JSON.parse(await file.text());
+        if (pkg.kind !== 'blade-incident-package' || !pkg.incident?.id) throw new Error('Arquivo não é um pacote de incidente da Blade.');
+        const inc = pkg.incident;
+        const exists = store.incident(inc.id);
+        if (exists && !(await confirmBox('Incidente já existe', `${inc.id} já existe neste navegador. Substituir pela versão do pacote?`, { danger: true, label: 'Substituir' }))) return;
+        await unpackFiles(pkg.files, inc.attachments);
+        db.incidents = [inc, ...db.incidents.filter((x) => x.id !== inc.id)];
+        const n = Number(inc.id.split('-').pop()); if (n > db.seq.inc) db.seq.inc = n;
+        store.audit('Pacote de incidente importado', inc.id, `${pkg.files?.length || 0} arquivo(s), exportado por ${pkg.exportedBy || '?'}`); store.persist();
+        toast(`${inc.id} importado com ${pkg.files?.length || 0} arquivo(s).`);
+        ctx.go(`#/incidente/${inc.id}`);
+      } catch (err) { toast(err.message, 'err'); }
+    });
     el.querySelector('[data-act=csv]')?.addEventListener('click', () => {
       const rows = [['ID', 'Título', 'Categoria', 'Severidade', 'Estado', 'TLP', 'Ocorrido', 'Detectado', 'Declarado', 'Contido', 'Erradicado', 'Recuperado', 'Encerrado']];
       for (const i of db.incidents) rows.push([i.id, i.title, i.category, i.severity, i.status, i.tlp, i.occurredAt, i.detectedAt, i.declaredAt, i.containedAt, i.eradicatedAt, i.recoveredAt, i.closedAt]);

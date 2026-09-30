@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Blade Incident Response</title>
 <meta name="description" content="Plataforma de gestão completa de resposta a incidentes de cibersegurança baseada no NIST SP 800-61 Revision 3 e no CSF 2.0.">
-<meta name="theme-color" content="#0d1117">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d1117'/%3E%3Cpath d='M9 25L23 7M17 7h6v6' stroke='%23f2744b' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0b1220">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1220'/%3E%3Cpath d='M9 25L23 7M17 7h6v6' stroke='%233b82f6' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="src/styles.css">
 <script>(function(){var t;try{t=localStorage.getItem('blade-theme')}catch(e){}if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.dataset.theme=t})()</script>
 </head>
@@ -15,8 +17,8 @@
 <header class="top">
   <button class="icon-btn only-m" id="menu" aria-label="Menu"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
   <a class="brand" href="#/" aria-label="Blade Incident Response — início">
-    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 25L23 8M16 7h8v8"/></svg>
-    <span><b>Blade</b> Incident Response</span>
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3l11 4v8c0 7-4.8 11.3-11 14-6.2-2.7-11-7-11-14V7z"/><path d="M11 20l10-10M16 10h5v5"/></svg>
+    <span class="brand-t"><b>BLADE</b><small>Incident Response</small></span>
   </a>
   <div class="search">
     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
@@ -24,6 +26,7 @@
     <div id="qres" class="qres" hidden></div>
   </div>
   <span class="org" id="org"></span>
+  <div class="user" id="user" hidden></div>
   <button class="icon-btn" id="theme" aria-label="Alternar tema"></button>
 </header>
 <div class="layout">

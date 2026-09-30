@@ -3,6 +3,7 @@ import * as store from '../core/store.js';
 import { html, uid, download } from '../core/util.js';
 import { SEVERITIES, CONDITIONS } from '../core/engine.js';
 import { demoDB } from '../data/seed.js';
+import { packFiles, unpackFiles, clearFiles } from '../core/files.js';
 import { ic, field, input, textarea, select, modal, confirmBox, toast, formData } from '../ui.js';
 
 const UNITS = [{ v: 'h', t: 'horas' }, { v: 'bd', t: 'dias úteis' }, { v: 'm', t: 'meses' }];
@@ -18,9 +19,10 @@ export default {
         <h2>Organização</h2>
         <div class="form-grid">
           ${field('Nome da organização', input('name', db.org.name, 'required'))}${field('Setor', input('sector', db.org.sector))}
-          ${field('Seu nome (autor dos registros)', input('analyst', db.org.analyst, 'required'), 'Registrado como autor na linha do tempo e na auditoria.')}
+          ${field('Nome padrão do usuário', input('analyst', db.org.analyst, 'required'), 'Usado quando nenhum membro da equipe está selecionado no topo da tela.')}
         </div>
         ${field('Critérios de declaração de incidente (DE.AE-08) — um por linha', textarea('criteria', db.org.incidentCriteria.join('\n'), 'rows="6"'))}
+        <label class="chk"><input type="checkbox" name="enforceGates" ${db.org.enforceGates ? 'checked' : ''}> <span><b>Controle de fases:</b> bloquear o avanço de estado enquanto houver tarefas obrigatórias pendentes nas fases anteriores</span></label>
         <button class="btn primary">Salvar</button>
       </form>
 
@@ -48,6 +50,7 @@ export default {
         <p class="small muted">Tudo fica armazenado apenas neste navegador. Exporte regularmente para backup ou para compartilhar com a equipe.</p>
         <div class="row">
           <button class="btn" data-act="export">${ic('down')} Exportar tudo (JSON)</button>
+          <button class="btn" data-act="export-files">${ic('down')} Exportar tudo + arquivos</button>
           <label class="btn">Importar JSON<input type="file" accept="application/json,.json" id="imp" hidden></label>
           <button class="btn" data-act="demo">Carregar demonstração</button>
           <button class="btn danger" data-act="reset">${ic('trash')} Apagar todos os dados</button>
@@ -60,7 +63,7 @@ export default {
     el.querySelector('#org').addEventListener('submit', (e) => {
       e.preventDefault();
       const f = formData(e.target);
-      Object.assign(db.org, { name: f.name, sector: f.sector, analyst: f.analyst, incidentCriteria: f.criteria.split('\n').map((s) => s.trim()).filter(Boolean) });
+      Object.assign(db.org, { name: f.name, sector: f.sector, analyst: f.analyst, enforceGates: f.enforceGates, incidentCriteria: f.criteria.split('\n').map((s) => s.trim()).filter(Boolean) });
       store.audit('Configurações da organização alteradas'); store.persist(); toast('Salvo.'); ctx.rerender();
     });
     el.querySelector('#sla').addEventListener('submit', (e) => {
@@ -79,17 +82,25 @@ export default {
       try {
         const data = JSON.parse(await file.text());
         if (!Array.isArray(data.incidents)) throw new Error('Arquivo não parece ser um backup da Blade.');
+        const files = data._files; delete data._files;
         if (!(await confirmBox('Importar backup', 'Os dados atuais serão substituídos pelo conteúdo do arquivo.', { danger: true, label: 'Importar' }))) return;
+        if (files?.length) await unpackFiles(files, data.incidents.flatMap((i) => i.attachments || []));
         store.replace(data); store.audit('Backup importado', file.name); store.persist(); toast('Backup importado.'); ctx.go('#/');
       } catch (err) { toast(err.message, 'err'); }
     });
     el.addEventListener('click', async (e) => {
       const b = e.target.closest('button'); if (!b) return;
       const d = b.dataset;
+      if (d.act === 'export-files') {
+        const files = await packFiles(store.get().incidents.flatMap((i) => i.attachments || []));
+        store.audit('Exportação completa com arquivos', '', `${files.length} arquivo(s)`); store.persist();
+        download(`blade-ir-completo-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ ...store.get(), _files: files }));
+      }
       if (d.act === 'export') { store.audit('Exportação completa'); store.persist(); download(`blade-ir-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(store.get(), null, 2)); }
       if (d.act === 'demo' && await confirmBox('Carregar demonstração', 'Os dados atuais serão substituídos por dados fictícios.', { danger: true })) { store.replace(await demoDB()); ctx.go('#/'); }
       if (d.act === 'reset' && await confirmBox('Apagar tudo', 'Todos os incidentes, eventos e cadastros deste navegador serão apagados. Exporte antes se precisar.', { danger: true, label: 'Apagar' })) {
         try { localStorage.removeItem('blade-ir-db'); } catch { /* ignorar */ }
+        await clearFiles().catch(() => {});
         location.hash = '#/'; location.reload();
       }
       if (d.regDel) { db.regulations = db.regulations.filter((r) => r.id !== d.regDel); store.persist(); ctx.rerender(); }

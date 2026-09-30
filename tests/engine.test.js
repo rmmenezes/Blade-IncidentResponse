@@ -102,3 +102,36 @@ test('dados de demonstração têm cadeias íntegras', async () => {
   for (const i of db.incidents) assert.equal(await chainVerify(i.timeline), -1);
   assert.equal(db.incidents[0].severity, 'S1');
 });
+
+test('bloqueios de fase e progresso de passos', async () => {
+  const { phaseBlockers, taskProgress, phaseDurations } = await import('../src/core/engine.js');
+  const inc = { tasks: [
+    { id: 'a', phase: 'triagem', required: true, status: 'aberta' },
+    { id: 'b', phase: 'contencao', required: true, status: 'aberta' },
+    { id: 'c', phase: 'triagem', required: false, status: 'aberta' },
+    { id: 'd', phase: 'analise', required: true, status: 'concluida' },
+  ] };
+  assert.deepEqual(phaseBlockers(inc, 'contencao').map((t) => t.id), ['a']);
+  assert.deepEqual(phaseBlockers(inc, 'recuperacao').map((t) => t.id), ['a', 'b']);
+  assert.equal(taskProgress({ steps: [{ done: true }, { done: false }] }), 50);
+  const d = phaseDurations({ occurredAt: '2026-01-01T00:00:00Z', detectedAt: '2026-01-01T02:00:00Z', closedAt: '2026-01-01T05:00:00Z' });
+  assert.deepEqual(d.map((x) => x.ms), [2 * 3600e3, 3 * 3600e3]);
+});
+
+test('hash cobre anexos sem invalidar cadeias antigas', async () => {
+  let chain = await chainAppend([], { id: 'x', at: 'a', recordedAt: 'b', author: 'u', type: 'nota', text: 't' });
+  chain = await chainAppend(chain, { id: 'y', at: 'a', recordedAt: 'b', author: 'u', type: 'evidencia', text: 'f', phase: 'analise', files: ['abc'] });
+  assert.equal(await chainVerify(chain), -1);
+  const bad = structuredClone(chain); bad[1].files = ['zzz'];
+  assert.equal(await chainVerify(bad), 1);
+});
+
+test('catálogo de procedimentos referencia papéis e tecnologias válidos', async () => {
+  const { DEFAULT_PROCEDURES, DEFAULT_TECHNOLOGIES, DEFAULT_PROCESSES } = await import('../src/data/library.js');
+  const { ROLES } = await import('../src/core/nist.js');
+  const roles = new Set(ROLES.map((r) => r.id)); const techs = new Set(DEFAULT_TECHNOLOGIES.map((t) => t.id)); const procs = new Set(DEFAULT_PROCESSES.map((p) => p.id));
+  for (const p of DEFAULT_PROCEDURES) {
+    assert.ok(procs.has(p.process), p.id);
+    for (const s of p.steps) { if (s.role) assert.ok(roles.has(s.role), `${p.id}: ${s.role}`); if (s.tech) assert.ok(techs.has(s.tech), `${p.id}: ${s.tech}`); }
+  }
+});

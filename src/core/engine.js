@@ -148,6 +148,46 @@ export function transitionWarnings(inc, to) {
   return w;
 }
 
+// Tarefas obrigatórias não concluídas das fases anteriores ao destino.
+export function phaseBlockers(inc, to) {
+  const idx = statusIndex(to);
+  return (inc.tasks || []).filter((t) => t.required && t.status !== 'concluida' && statusIndex(t.phase) < idx && statusIndex(t.phase) >= 0);
+}
+
+// Progresso de uma tarefa com checklist de passos.
+export function taskProgress(t) {
+  if (!t.steps?.length) return t.status === 'concluida' ? 100 : 0;
+  return Math.round((t.steps.filter((s) => s.done).length / t.steps.length) * 100);
+}
+
+// Duração de cada fase a partir dos marcos registrados.
+export const MILESTONES = [
+  ['occurredAt', 'Atividade maliciosa'], ['detectedAt', 'Detecção'], ['declaredAt', 'Declaração'], ['triagedAt', 'Triagem'],
+  ['containedAt', 'Contenção'], ['eradicatedAt', 'Erradicação'], ['recoveredAt', 'Recuperação'], ['closedAt', 'Encerramento'],
+];
+export function phaseDurations(inc, now = new Date()) {
+  const pts = MILESTONES.filter(([k]) => inc[k]).map(([k, label]) => ({ k, label, at: new Date(inc[k]) })).sort((a, b) => a.at - b.at);
+  const out = [];
+  for (let i = 0; i < pts.length; i++) {
+    const end = pts[i + 1]?.at || (inc.closedAt ? null : now);
+    if (!end) continue;
+    out.push({ from: pts[i].label, to: pts[i + 1]?.label || 'agora', start: pts[i].at.toISOString(), end: end.toISOString(), ms: end - pts[i].at });
+  }
+  return out;
+}
+
+export function inPeriod(inc, from, to) {
+  const d = new Date(inc.declaredAt || inc.createdAt);
+  return (!from || d >= new Date(from)) && (!to || d <= new Date(to));
+}
+
+// Cobertura das Funções do CSF pelas tecnologias cadastradas.
+export function techCoverage(techs) {
+  const out = { GV: [], ID: [], PR: [], DE: [], RS: [], RC: [] };
+  for (const t of techs) for (const f of t.functions || []) out[f]?.push(t);
+  return out;
+}
+
 /* ---------- Conformidade com as subcategorias ---------- */
 export function csfProgress(inc, phase) {
   const list = SUBCATEGORIES.filter((s) => !phase || s.phase === phase);
@@ -182,7 +222,13 @@ export async function sha256Buffer(buf) {
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-const canon = (e) => JSON.stringify([e.id, e.at, e.recordedAt, e.author, e.type, e.text, e.prevHash]);
+// Campos opcionais (fase, anexos) só entram no hash quando presentes — mantém válidas as cadeias antigas.
+const canon = (e) => {
+  const base = [e.id, e.at, e.recordedAt, e.author, e.type, e.text, e.prevHash];
+  if (e.phase) base.push(`phase:${e.phase}`);
+  if (e.files?.length) base.push(`files:${e.files.join(',')}`);
+  return JSON.stringify(base);
+};
 
 // Acrescenta um registro à cadeia: cada hash cobre o conteúdo e o hash anterior.
 export async function chainAppend(chain, entry) {

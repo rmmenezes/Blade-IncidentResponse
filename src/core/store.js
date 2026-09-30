@@ -2,6 +2,7 @@
 import { uid, pad } from './util.js';
 import { DEFAULT_SLA, DEFAULT_REGULATIONS, computeSeverity, chainAppend, transitionStamps } from './engine.js';
 import { statusById } from './nist.js';
+import { DEFAULT_TECHNOLOGIES, DEFAULT_PROCESSES, DEFAULT_PROCEDURES } from '../data/library.js';
 
 const KEY = 'blade-ir-db';
 const VERSION = 1;
@@ -9,10 +10,11 @@ const VERSION = 1;
 export function emptyDB() {
   return {
     version: VERSION,
-    org: { name: 'Minha organização', sector: '', analyst: 'Analista', incidentCriteria: DEFAULT_CRITERIA },
+    org: { name: 'Minha organização', sector: '', analyst: 'Analista', currentUser: '', enforceGates: false, incidentCriteria: DEFAULT_CRITERIA },
     sla: structuredClone(DEFAULT_SLA),
     regulations: structuredClone(DEFAULT_REGULATIONS),
     incidents: [], events: [], assets: [], contacts: [], improvements: [], exercises: [],
+    technologies: structuredClone(DEFAULT_TECHNOLOGIES), processes: structuredClone(DEFAULT_PROCESSES), procedures: structuredClone(DEFAULT_PROCEDURES),
     readiness: {}, audit: [], seq: { inc: 0, evt: 0 },
   };
 }
@@ -49,6 +51,7 @@ function migrate(d) {
   const out = { ...base, ...d, org: { ...base.org, ...d.org }, seq: { ...base.seq, ...d.seq } };
   // Novas regulações padrão aparecem sem sobrescrever as editadas.
   for (const r of base.regulations) if (!out.regulations.some((x) => x.id === r.id)) out.regulations.push(r);
+  for (const i of out.incidents) { i.attachments ||= []; i.tools ||= []; i.team ||= []; }
   return out;
 }
 
@@ -60,8 +63,12 @@ export function persist() { writeRaw(JSON.stringify(db)); emit(); }
 
 export function replace(next) { db = migrate(next); persist(); }
 
+// Usuário atual: um membro da equipe selecionado no topo, ou o nome livre das configurações.
+export const me = () => db?.contacts.find((c) => c.id === db.org.currentUser) || null;
+export const userName = () => me()?.name || db?.org.analyst || 'Analista';
+
 export function audit(action, target = '', detail = '') {
-  db.audit.unshift({ id: uid('a'), at: new Date().toISOString(), who: db.org.analyst, action, target, detail });
+  db.audit.unshift({ id: uid('a'), at: new Date().toISOString(), who: userName(), action, target, detail });
   if (db.audit.length > 2000) db.audit.length = 2000;
 }
 
@@ -84,7 +91,7 @@ export function newIncident(data = {}) {
     containedAt: null, eradicatedAt: null, recoveredAt: null, closedAt: null,
     roles: {}, assets: [], iocs: [], evidence: [], tasks: [], comms: [], notifications: [], csf: {},
     magnitude: {}, analysis: { whys: ['', '', '', '', ''], tactics: [] }, recovery: {}, lessons: {},
-    timeline: [], playbooks: [], sourceEvents: [], createdAt: now, updatedAt: now,
+    timeline: [], playbooks: [], sourceEvents: [], attachments: [], tools: [], team: [], createdAt: now, updatedAt: now,
     ...data,
   };
 }
@@ -94,8 +101,10 @@ export function recompute(inc) {
   inc.updatedAt = new Date().toISOString();
 }
 
-export async function addTimeline(inc, { at, type = 'nota', text }) {
-  const entry = { id: uid('t'), at: at || new Date().toISOString(), recordedAt: new Date().toISOString(), author: db.org.analyst, type, text };
+export async function addTimeline(inc, { at, type = 'nota', text, files = [], fileIds = [] }) {
+  const entry = { id: uid('t'), at: at || new Date().toISOString(), recordedAt: new Date().toISOString(), author: userName(), type, text, phase: inc.status };
+  if (files.length) entry.files = files;
+  if (fileIds.length) entry.fileIds = fileIds;
   inc.timeline = await chainAppend(inc.timeline, entry);
 }
 

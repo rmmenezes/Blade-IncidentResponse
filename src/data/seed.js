@@ -9,7 +9,9 @@ const ago = (h) => new Date(Date.now() - h * H).toISOString();
 
 export async function demoDB() {
   const db = emptyDB();
-  db.org = { ...db.org, name: 'Blade Demo S.A.', sector: 'Serviços financeiros', analyst: 'Ana Souza' };
+  db.org = { ...db.org, name: 'Blade Demo S.A.', sector: 'Serviços financeiros', analyst: 'Ana Souza', currentUser: 'c1' };
+  db.technologies = db.technologies.map((t, n) => ({ ...t, owner: ['c4', 'c2', 'c4', 'c4', 'c2', 'c4', 'c1', 'c5'][n] || '' }));
+  db.processes = db.processes.map((p) => ({ ...p, owner: 'c1', reviewedAt: ago(24 * 90) }));
   db.regulations.find((r) => r.id === 'certbr').enabled = true;
 
   db.contacts = [
@@ -64,7 +66,7 @@ export async function demoDB() {
     functional: 3, information: 2, recoverability: 2, scope: 1, personalData: true, tlp: 'AMBER+STRICT',
     occurredAt: ago(30), detectedAt: ago(6), declaredAt: ago(5.5), awareAt: ago(5), triagedAt: ago(5),
     roles: { lead: 'c1', handler: 'c2', legal: 'c3', tech: 'c4', comms: 'c5', leadership: 'c6', third: 'c7' },
-    assets: ['a1', 'a2', 'a3'], playbooks: ['ransomware'], sourceEvents: [],
+    assets: ['a1', 'a2', 'a3'], playbooks: ['ransomware'], sourceEvents: [], tools: ['tec-edr', 'tec-siem', 'tec-forense', 'tec-backup'], team: ['c1', 'c2', 'c3', 'c4', 'c7'],
     iocs: [
       { id: uid('i'), type: 'IPv4', value: '198.51.100.23', desc: 'Origem do login VPN', tlp: 'AMBER', firstSeen: ago(30) },
       { id: uid('i'), type: 'Hash SHA-256', value: 'a3f1c0de9b7e44c2a1d0f5e6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6', desc: 'Binário do encriptador', tlp: 'AMBER', firstSeen: ago(6) },
@@ -75,9 +77,12 @@ export async function demoDB() {
       { id: uid('e'), name: 'Logs VPN (30 dias)', type: 'Log', hash: '1b7d...a9', hashAlg: 'SHA-256', collectedBy: 'Diego Rocha', collectedAt: ago(4), location: 'Bucket evidências (WORM)', custody: [] },
     ],
     tasks: [
-      { id: uid('k'), title: 'Isolar SRV-FILE-02 e SRV-ERP-01 via EDR', phase: 'contencao', csf: 'RS.MI-01', owner: 'c2', due: ago(4), status: 'concluida' },
+      { id: uid('k'), title: 'Isolar SRV-FILE-02 e SRV-ERP-01 via EDR', phase: 'contencao', csf: 'RS.MI-01', owner: 'c2', due: ago(4), status: 'concluida', required: true, doneBy: 'Bruno Lima', doneAt: ago(4.9) },
       { id: uid('k'), title: 'Desabilitar conta j.pereira e revogar sessões VPN', phase: 'contencao', csf: 'RS.MI-01', owner: 'c4', due: ago(4), status: 'concluida' },
-      { id: uid('k'), title: 'Confirmar imutabilidade do repositório de backup', phase: 'contencao', csf: 'RS.MI-01', owner: 'c4', due: ago(-2), status: 'andamento' },
+      { id: uid('k'), title: 'Confirmar imutabilidade do repositório de backup', phase: 'contencao', csf: 'RS.MI-01', owner: 'c4', due: ago(-2), status: 'andamento', required: true },
+      { id: uid('k'), title: 'Procedimento: Aquisição de memória e disco', phase: 'analise', csf: 'RS.AN-07', owner: 'c2', due: ago(-6), status: 'andamento', required: true, procedure: 'pop-memoria',
+        steps: [['Preparar mídia de coleta esterilizada e ferramenta validada', true], ['Adquirir memória RAM', true], ['Adquirir imagem de disco (bloqueio de escrita)', false], ['Calcular SHA-256 das imagens', false], ['Registrar evidência e abrir cadeia de custódia', false], ['Armazenar em local controlado (WORM/cofre)', false]]
+          .map(([text, done]) => ({ id: uid('s'), text, done, role: 'handler', doneBy: done ? 'Bruno Lima' : '', doneAt: done ? ago(4.6) : null })) },
       { id: uid('k'), title: 'Avaliar exfiltração e dados pessoais afetados', phase: 'analise', csf: 'RS.AN-08', owner: 'c3', due: ago(-12), status: 'aberta' },
     ],
     comms: [

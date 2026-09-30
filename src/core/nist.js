@@ -1,6 +1,17 @@
 // Referência NIST SP 800-61 Rev. 3 (abr/2025): recomendações de resposta a incidentes
 // organizadas pelas Funções, Categorias e Subcategorias do NIST CSF 2.0.
 
+// Documentos oficiais.
+export const NIST_LINKS = {
+  pub: 'https://csrc.nist.gov/pubs/sp/800/61/r3/final',
+  pdf: 'https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-61r3.pdf',
+  csf: 'https://www.nist.gov/cyberframework',
+  csfPdf: 'https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf',
+  rev2: 'https://csrc.nist.gov/pubs/sp/800/61/r2/final',
+  anpd: 'https://www.gov.br/anpd/pt-br/assuntos/incidente-de-seguranca',
+  certbr: 'https://www.cert.br/',
+};
+
 export const FUNCTIONS = [
   { id: 'GV', name: 'Governar', en: 'Govern', group: 'prep', color: '#8b7cf6',
     desc: 'Estratégia, expectativas e política de gestão de risco de cibersegurança — inclui papéis, responsabilidades e política de resposta a incidentes.' },

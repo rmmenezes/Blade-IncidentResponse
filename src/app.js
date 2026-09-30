@@ -15,17 +15,31 @@ import audit from './views/audit.js';
 import reference from './views/reference.js';
 import settings from './views/settings.js';
 import welcome from './views/welcome.js';
+import assignments from './views/assignments.js';
+import reports from './views/reports.js';
+import library from './views/library.js';
+import { saveFile } from './core/files.js';
+import { NIST_LINKS } from './core/nist.js';
 
 const NAV = [
-  { href: '#/', label: 'Painel', icon: 'dash' },
-  { href: '#/eventos', label: 'Eventos adversos', icon: 'radar', badge: (db) => db.events.filter((e) => e.status === 'novo' || e.status === 'analise').length },
-  { href: '#/incidentes', label: 'Incidentes', icon: 'alert', badge: (db) => db.incidents.filter((i) => i.status !== 'encerrado').length },
-  { href: '#/playbooks', label: 'Playbooks', icon: 'book' },
-  { href: '#/preparacao', label: 'Preparação', icon: 'shield' },
-  { href: '#/melhorias', label: 'Melhorias', icon: 'up' },
-  { href: '#/auditoria', label: 'Auditoria', icon: 'list' },
-  { href: '#/referencia', label: 'NIST SP 800-61r3', icon: 'info' },
-  { href: '#/config', label: 'Configurações', icon: 'gear' },
+  { group: 'Operação', items: [
+    { href: '#/', label: 'Painel', icon: 'dash' },
+    { href: '#/eventos', label: 'Eventos adversos', icon: 'radar', badge: (db) => db.events.filter((e) => e.status === 'novo' || e.status === 'analise').length },
+    { href: '#/incidentes', label: 'Incidentes', icon: 'alert', badge: (db) => db.incidents.filter((i) => i.status !== 'encerrado').length },
+    { href: '#/atribuicoes', label: 'Atribuições', icon: 'users', badge: (db) => { const me = store.me(); return me ? db.incidents.filter((i) => i.status !== 'encerrado').flatMap((i) => i.tasks).filter((t) => t.owner === me.id && t.status !== 'concluida').length : 0; } },
+    { href: '#/relatorios', label: 'Relatórios', icon: 'chart' },
+  ] },
+  { group: 'Processos e tecnologia', items: [
+    { href: '#/biblioteca/tecnologias', match: '/biblioteca', label: 'Tecnologias e POPs', icon: 'layers' },
+    { href: '#/playbooks', label: 'Playbooks', icon: 'book' },
+    { href: '#/preparacao', label: 'Preparação', icon: 'shield' },
+    { href: '#/melhorias', label: 'Melhorias', icon: 'up' },
+  ] },
+  { group: 'Governança', items: [
+    { href: '#/auditoria', label: 'Auditoria', icon: 'list' },
+    { href: '#/referencia', label: 'NIST SP 800-61r3', icon: 'info' },
+    { href: '#/config', label: 'Configurações', icon: 'gear' },
+  ] },
 ];
 
 const ROUTES = [
@@ -34,6 +48,9 @@ const ROUTES = [
   [/^\/incidentes(?:\/(novo))?$/, incidents],
   [/^\/incidente\/([^/]+)\/relatorio$/, report],
   [/^\/incidente\/([^/]+)(?:\/([a-z-]+))?$/, incident],
+  [/^\/atribuicoes$/, assignments],
+  [/^\/relatorios(?:\/([a-z-]+))?$/, reports],
+  [/^\/biblioteca(?:\/([a-z-]+))?$/, library],
   [/^\/playbooks(?:\/([a-z-]+))?$/, playbooks],
   [/^\/preparacao(?:\/([a-z-]+))?$/, prep],
   [/^\/melhorias$/, improvements],
@@ -49,13 +66,32 @@ export const go = (h) => { if (location.hash === h) route(); else location.hash 
 
 function renderNav(path) {
   const db = store.get();
-  nav.innerHTML = String(html`${NAV.map((n) => {
-    const p = n.href.slice(1);
+  nav.innerHTML = String(html`${NAV.map((g) => html`<div class="nav-group"><p>${g.group}</p>${g.items.map((n) => {
+    const p = n.match || n.href.slice(1);
     const active = p === '/' ? path === '/' : path.startsWith(p) || (p === '/incidentes' && path.startsWith('/incidente/'));
     const b = db && n.badge ? n.badge(db) : 0;
     return html`<a href="${n.href}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}>${ic(n.icon)}<span>${n.label}</span>${b ? html`<em class="nb">${b}</em>` : ''}</a>`;
-  })}`);
+  })}</div>`)}
+  <div class="nav-foot"><a href="${NIST_LINKS.pdf}" target="_blank" rel="noopener">${ic('ext')}<span>NIST SP 800-61r3 (PDF oficial)</span></a></div>`);
   document.getElementById('org').textContent = db?.org.name || '';
+  renderUser();
+}
+
+// Seletor de usuário atual (autor dos registros e dono de "minhas tarefas").
+const userBox = document.getElementById('user');
+function renderUser() {
+  const db = store.get();
+  if (!db) { userBox.hidden = true; return; }
+  userBox.hidden = false;
+  const me = store.me();
+  const internal = db.contacts.filter((c) => !c.external);
+  userBox.innerHTML = String(html`<span class="avatar">${(me?.name || db.org.analyst || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()}</span>
+    <select id="usersel" aria-label="Usuário atual"><option value="">${db.org.analyst || 'Analista'}</option>${internal.map((c) => html`<option value="${c.id}" ${c.id === me?.id ? 'selected' : ''}>${c.name}</option>`)}</select>`);
+  userBox.querySelector('#usersel').addEventListener('change', (e) => {
+    db.org.currentUser = e.target.value;
+    store.audit('Usuário atual alterado', store.userName()); store.persist();
+    toast(`Atuando como ${store.userName()}.`); rerender();
+  });
 }
 
 let cleanup = null;
@@ -102,8 +138,22 @@ async function rerender() {
 }
 const ctx = { go, rerender, query: new URLSearchParams() };
 
+// Imagem ilustrativa anexada ao incidente de demonstração.
+async function demoAttachment() {
+  const inc = store.incident('INC-2026-0003');
+  if (!inc || inc.attachments.length) return;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#101828"/><rect x="40" y="40" width="560" height="280" rx="8" fill="#1d2939" stroke="#d92d20"/>
+    <text x="320" y="120" fill="#f04438" font-family="monospace" font-size="28" text-anchor="middle">YOUR FILES ARE ENCRYPTED</text>
+    <text x="320" y="170" fill="#d0d5dd" font-family="monospace" font-size="16" text-anchor="middle">Nota de resgate — SRV-FILE-02 (exemplo fictício)</text>
+    <text x="320" y="210" fill="#98a2b3" font-family="monospace" font-size="14" text-anchor="middle">README_RESTORE.txt · extensão .lockbit</text></svg>`;
+  const meta = await saveFile(new File([svg], 'nota-de-resgate-SRV-FILE-02.svg', { type: 'image/svg+xml' }), { context: 'general', addedBy: 'Bruno Lima', caption: 'Captura da nota de resgate' });
+  inc.attachments.push(meta);
+  await store.addTimeline(inc, { type: 'evidencia', text: `Arquivo anexado: ${meta.name}`, files: [meta.sha256], fileIds: [meta.id] });
+  store.persist();
+}
+
 async function start(mode) {
-  if (mode === 'demo') store.replace(await demoDB());
+  if (mode === 'demo') { store.replace(await demoDB()); await demoAttachment().catch(() => {}); }
   else { store.replace(store.emptyDB()); store.audit('Plataforma inicializada'); store.persist(); }
   toast(mode === 'demo' ? 'Dados de demonstração carregados.' : 'Ambiente criado. Comece pela Preparação.');
   go(mode === 'demo' ? '#/' : '#/config');

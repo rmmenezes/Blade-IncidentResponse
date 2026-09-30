@@ -1,7 +1,7 @@
 import * as store from '../core/store.js';
 import { html, fmtDuration } from '../core/util.js';
 import { metrics, slaStatus, notificationStatus, SEVERITIES, csfProgress } from '../core/engine.js';
-import { STATUSES, FUNCTIONS } from '../core/nist.js';
+import { STATUSES, FUNCTIONS, NIST_LINKS } from '../core/nist.js';
 import { READINESS } from '../data/readiness.js';
 import { sevBadge, statusBadge, when, ic, empty, bar } from '../ui.js';
 
@@ -24,7 +24,9 @@ export default {
     alerts.sort((a, b) => new Date(a.due) - new Date(b.due));
 
     const pendingEvents = db.events.filter((e) => e.status === 'novo' || e.status === 'analise');
-    const tasks = open.flatMap((i) => i.tasks.filter((t) => t.status !== 'concluida').map((t) => ({ ...t, inc: i })))
+    const me = store.me();
+    const who = (id) => db.contacts.find((c) => c.id === id)?.name || 'sem responsável';
+    const tasks = open.flatMap((i) => i.tasks.filter((t) => t.status !== 'concluida' && (!me || t.owner === me.id)).map((t) => ({ ...t, inc: i })))
       .sort((a, b) => new Date(a.due || '2999') - new Date(b.due || '2999')).slice(0, 8);
     const readyScore = Math.round((READINESS.reduce((s, r) => s + (db.readiness[r.id] || 0), 0) / (READINESS.length * 3)) * 100);
     const impOpen = db.improvements.filter((p) => p.status !== 'concluida').length;
@@ -32,8 +34,8 @@ export default {
 
     return html`<div class="page">
       <div class="page-head">
-        <div><h1>Painel de resposta a incidentes</h1><p class="muted">${db.org.name} · visão consolidada Detectar · Responder · Recuperar</p></div>
-        <div class="row"><a class="btn" href="#/eventos">${ic('radar')} Registrar evento</a><a class="btn primary" href="#/incidentes/novo">${ic('plus')} Declarar incidente</a></div>
+        <div><h1>Painel de resposta a incidentes</h1><p class="muted">${db.org.name} · visão consolidada Detectar · Responder · Recuperar · <a href="${NIST_LINKS.pdf}" target="_blank" rel="noopener">NIST SP 800-61r3</a></p></div>
+        <div class="row"><a class="btn" href="#/relatorios/executivo">${ic('chart')} Relatório executivo</a><a class="btn" href="#/eventos">${ic('radar')} Registrar evento</a><a class="btn primary" href="#/incidentes/novo">${ic('plus')} Declarar incidente</a></div>
       </div>
 
       <div class="kpis">
@@ -72,9 +74,9 @@ export default {
 
       <div class="grid2">
         <section class="card">
-          <h2>Próximas tarefas</h2>
+          <div class="card-head"><h2>${me ? 'Minhas tarefas' : 'Próximas tarefas'}</h2><a href="#/atribuicoes">atribuições</a></div>
           ${tasks.length ? html`<ul class="list">${tasks.map((t) => html`<li><a href="#/incidente/${t.inc.id}/tarefas">${t.title}</a>
-            <span class="muted">${t.inc.id} · ${t.due ? when(t.due) : 'sem prazo'}${t.due && new Date(t.due) < now ? html` <b class="txt-late">atrasada</b>` : ''}</span></li>`)}</ul>` : empty('Nenhuma tarefa pendente.')}
+            <span class="muted">${t.inc.id}${me ? '' : ` · ${who(t.owner)}`} · ${t.due ? when(t.due) : 'sem prazo'}${t.due && new Date(t.due) < now ? html` <b class="txt-late">atrasada</b>` : ''}</span></li>`)}</ul>` : empty('Nenhuma tarefa pendente.')}
         </section>
         <section class="card">
           <h2>Ciclo de vida CSF 2.0</h2>

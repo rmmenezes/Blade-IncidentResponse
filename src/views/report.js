@@ -1,7 +1,8 @@
 // Relatório do incidente pronto para impressão / PDF (RC.RP-06: documentação concluída).
 import * as store from '../core/store.js';
 import { html, fmtDate, fmtDuration, diff } from '../core/util.js';
-import { statusById, SUBCATEGORIES, roleById } from '../core/nist.js';
+import { statusById, SUBCATEGORIES, roleById, NIST_LINKS } from '../core/nist.js';
+import { fmtSize } from '../core/files.js';
 import { csfProgress, notificationStatus, priorityScore, FACTORS, sevById } from '../core/engine.js';
 import { ic, tlpBadge } from '../ui.js';
 
@@ -18,12 +19,12 @@ export default {
     const tl = [...i.timeline].sort((a, b) => new Date(a.at) - new Date(b.at));
     const row = (k, v) => html`<tr><th>${k}</th><td>${v || '—'}</td></tr>`;
     return html`<div class="page report">
-      <div class="no-print row"><a class="btn" href="#/incidente/${i.id}">← Voltar</a><button class="btn primary" onclick="print()">${ic('print')} Imprimir / salvar PDF</button></div>
+      <div class="no-print row"><a class="btn" href="#/incidente/${i.id}">← Voltar</a><a class="btn" href="#/relatorios">Relatórios</a><button class="btn primary" onclick="print()">${ic('print')} Imprimir / salvar PDF</button></div>
       <header class="rep-head">
         <div><p class="muted">${db.org.name} · Relatório de incidente de cibersegurança</p><h1>${i.id} — ${i.title}</h1></div>
         <div>${tlpBadge(i.tlp)}</div>
       </header>
-      <p class="small muted">Gerado em ${fmtDate(new Date().toISOString())} por ${db.org.analyst} · Estrutura baseada no NIST SP 800-61 Rev. 3 / CSF 2.0</p>
+      <p class="small muted">Gerado em ${fmtDate(new Date().toISOString())} por ${store.userName()} · Estrutura baseada no <a href="${NIST_LINKS.pdf}" target="_blank" rel="noopener">NIST SP 800-61 Rev. 3</a> / CSF 2.0</p>
 
       <h2>1. Sumário executivo</h2>
       <p>${i.description}</p>
@@ -61,9 +62,11 @@ export default {
         <tbody>${tl.map((e) => html`<tr><td class="nowrap">${fmtDate(e.at)}</td><td>${e.type}</td><td>${e.text}</td><td>${e.author}</td></tr>`)}</tbody></table>
       <p class="small muted">Hash final da cadeia: <code>${i.timeline.at(-1)?.hash || '—'}</code></p>
 
-      <h2>7. Ações</h2>
-      <table class="tbl"><thead><tr><th>Fase</th><th>Tarefa</th><th>CSF</th><th>Responsável</th><th>Estado</th></tr></thead>
-        <tbody>${i.tasks.map((t) => html`<tr><td>${statusById[t.phase]?.name}</td><td>${t.title}</td><td>${t.csf}</td><td>${who(t.owner)}</td><td>${t.status}</td></tr>`)}</tbody></table>
+      <h2>7. Ações e passos</h2>
+      <table class="tbl"><thead><tr><th>Fase</th><th>Tarefa</th><th>CSF</th><th>Responsável</th><th>Estado</th><th>Conclusão</th></tr></thead>
+        <tbody>${i.tasks.map((t) => html`<tr><td>${statusById[t.phase]?.name}</td><td>${t.title}${t.required ? ' (obrigatória)' : ''}${t.steps?.length ? html`<ol class="small">${t.steps.map((s2) => html`<li>${s2.done ? '✔' : '○'} ${s2.text}${s2.doneBy ? ` — ${s2.doneBy}` : ''}</li>`)}</ol>` : ''}</td>
+          <td>${t.csf}</td><td>${who(t.owner)}</td><td>${t.status}</td><td>${t.doneBy ? `${t.doneBy}, ${fmtDate(t.doneAt)}` : '—'}</td></tr>`)}</tbody></table>
+      <p class="small"><b>Tecnologias utilizadas:</b> ${(i.tools || []).map((id2) => db.technologies.find((x) => x.id === id2)?.name).filter(Boolean).join(', ') || '—'}</p>
 
       <h2>8. Indicadores (${i.iocs.length})</h2>
       <table class="tbl"><tbody>${i.iocs.map((x) => html`<tr><td>${x.type}</td><td><code class="wrap">${x.value}</code></td><td>${x.desc}</td><td>TLP:${x.tlp}</td></tr>`)}</tbody></table>
@@ -72,6 +75,9 @@ export default {
       <table class="tbl"><thead><tr><th>Evidência</th><th>Hash</th><th>Coleta</th><th>Custódia</th></tr></thead>
         <tbody>${i.evidence.map((e) => html`<tr><td>${e.name}<br><small>${e.type}</small></td><td><code class="wrap">${e.hashAlg}: ${e.hash}</code></td><td>${e.collectedBy}<br><small>${fmtDate(e.collectedAt)}</small></td>
           <td>${(e.custody || []).map((c) => `${fmtDate(c.at)} ${c.from} → ${c.to}`).join('; ') || '—'}</td></tr>`)}</tbody></table>
+
+      <h3>Arquivos anexados (${i.attachments.length})</h3>
+      <table class="tbl"><tbody>${i.attachments.map((a) => html`<tr><td>${a.name}</td><td>${fmtSize(a.size)}</td><td><code class="wrap">SHA-256: ${a.sha256}</code></td><td>${a.addedBy || ''} · ${fmtDate(a.addedAt)}</td></tr>`)}</tbody></table>
 
       <h2>10. Comunicações e notificações</h2>
       <table class="tbl"><thead><tr><th>Obrigação</th><th>Prazo</th><th>Estado</th></tr></thead>
