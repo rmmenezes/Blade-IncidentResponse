@@ -1,0 +1,122 @@
+// Playbooks de resposta. Cada passo indica a fase na plataforma e a subcategoria CSF 2.0.
+const s = (phase, csf, title) => ({ phase, csf, title });
+
+export const PLAYBOOKS = [
+  {
+    id: 'ransomware', name: 'Ransomware', category: 'Ransomware',
+    summary: 'Criptografia de dados/sistemas com pedido de resgate, frequentemente com dupla extorsão (exfiltração prévia).',
+    steps: [
+      s('triagem', 'DE.AE-02', 'Confirmar a nota de resgate, extensão dos arquivos e família do ransomware (ID Ransomware, CTI).'),
+      s('triagem', 'RS.MA-04', 'Acionar liderança executiva, jurídico e seguradora de risco cibernético.'),
+      s('contencao', 'RS.MI-01', 'Isolar da rede os hosts afetados (EDR/switch) sem desligá-los, preservando memória.'),
+      s('contencao', 'RS.MI-01', 'Desabilitar contas comprometidas e revogar sessões/tokens; bloquear C2 conhecidos.'),
+      s('contencao', 'RS.MI-01', 'Proteger backups: desconectar repositórios e confirmar imutabilidade/offline.'),
+      s('analise', 'RS.AN-07', 'Coletar imagens de memória/disco e logs (EDR, AD, VPN, firewall) com hash e cadeia de custódia.'),
+      s('analise', 'RS.AN-03', 'Identificar vetor inicial (RDP, VPN, phishing, vulnerabilidade) e movimentação lateral.'),
+      s('analise', 'RS.AN-08', 'Determinar se houve exfiltração e quais dados pessoais/confidenciais foram afetados.'),
+      s('analise', 'RS.CO-02', 'Avaliar obrigações de notificação (ANPD, titulares, reguladores setoriais, polícia).'),
+      s('erradicacao', 'RS.MI-02', 'Remover persistências, ferramentas do atacante e contas criadas; aplicar correções no vetor.'),
+      s('erradicacao', 'RS.MI-02', 'Redefinir credenciais privilegiadas, incluindo KRBTGT (duas vezes) e contas de serviço.'),
+      s('recuperacao', 'RC.RP-03', 'Verificar integridade dos backups (hash, varredura antimalware) antes da restauração.'),
+      s('recuperacao', 'RC.RP-02', 'Restaurar por prioridade de negócio a partir de ambiente limpo.'),
+      s('recuperacao', 'RC.RP-05', 'Validar integridade dos sistemas restaurados e monitorar reinfecção.'),
+      s('recuperacao', 'RC.CO-03', 'Comunicar progresso da recuperação às partes interessadas.'),
+      s('pos', 'ID.IM-01', 'Conduzir lições aprendidas e atualizar o plano de resposta.'),
+    ],
+  },
+  {
+    id: 'phishing', name: 'Phishing', category: 'Phishing',
+    summary: 'Mensagem fraudulenta que busca credenciais, execução de malware ou ação do usuário.',
+    steps: [
+      s('triagem', 'RS.MA-02', 'Validar a denúncia: analisar cabeçalhos, remetente, links e anexos em sandbox.'),
+      s('triagem', 'DE.AE-03', 'Buscar a mesma mensagem em outras caixas (gateway de e-mail / eDiscovery).'),
+      s('analise', 'RS.AN-03', 'Identificar quem clicou, enviou credenciais ou executou anexos.'),
+      s('contencao', 'RS.MI-01', 'Remover a mensagem de todas as caixas e bloquear remetente, domínio e URLs.'),
+      s('contencao', 'RS.MI-01', 'Redefinir senhas e revogar sessões de usuários que interagiram; exigir MFA.'),
+      s('erradicacao', 'RS.MI-02', 'Examinar endpoints de quem executou anexos e remover artefatos.'),
+      s('analise', 'RS.CO-03', 'Compartilhar indicadores com a equipe, provedores e ISAC (TLP adequado).'),
+      s('pos', 'ID.IM-03', 'Reforçar conscientização (PR.AT) com o exemplo real e ajustar filtros.'),
+    ],
+  },
+  {
+    id: 'bec', name: 'Comprometimento de e-mail corporativo (BEC)', category: 'Comprometimento de e-mail corporativo (BEC)',
+    summary: 'Uso de caixa de e-mail comprometida ou falsificada para fraude financeira ou roubo de dados.',
+    steps: [
+      s('triagem', 'RS.MA-04', 'Se houve transferência, acionar imediatamente o banco para tentativa de bloqueio/recall.'),
+      s('contencao', 'RS.MI-01', 'Redefinir senha, revogar sessões e tokens OAuth, remover regras de encaminhamento.'),
+      s('analise', 'RS.AN-07', 'Exportar logs de auditoria da caixa (logins, regras, acessos a mensagens).'),
+      s('analise', 'RS.AN-08', 'Determinar mensagens lidas/enviadas pelo atacante e contatos afetados.'),
+      s('analise', 'RS.CO-02', 'Notificar parceiros/clientes que receberam mensagens fraudulentas.'),
+      s('erradicacao', 'RS.MI-02', 'Remover aplicativos OAuth maliciosos e dispositivos registrados indevidamente.'),
+      s('pos', 'ID.IM-03', 'Implantar verificação fora de banda para pagamentos e alterações de dados bancários.'),
+    ],
+  },
+  {
+    id: 'data-breach', name: 'Vazamento de dados pessoais', category: 'Vazamento / exfiltração de dados',
+    summary: 'Acesso, divulgação ou exfiltração não autorizada de dados pessoais ou confidenciais.',
+    steps: [
+      s('triagem', 'RS.MA-04', 'Acionar DPO/Encarregado e jurídico desde o início.'),
+      s('contencao', 'RS.MI-01', 'Fechar o acesso exposto (bucket público, credencial, API) e preservar evidências.'),
+      s('analise', 'RS.AN-08', 'Quantificar titulares, categorias de dados (sensíveis, crianças) e período de exposição.'),
+      s('analise', 'RS.AN-03', 'Determinar causa raiz e se houve de fato acesso/cópia por terceiros.'),
+      s('analise', 'RS.CO-02', 'Avaliar risco ou dano relevante e comunicar ANPD e titulares no prazo (3 dias úteis).'),
+      s('erradicacao', 'RS.MI-02', 'Corrigir a falha e revisar controles semelhantes em outros ativos.'),
+      s('recuperacao', 'RC.CO-04', 'Publicar comunicado aprovado, se necessário, e canal de atendimento a titulares.'),
+      s('pos', 'ID.IM-01', 'Atualizar inventário de dados e relatório de impacto (RIPD).'),
+    ],
+  },
+  {
+    id: 'ddos', name: 'Negação de serviço (DDoS)', category: 'Negação de serviço (DoS/DDoS)',
+    summary: 'Esgotamento de recursos de rede ou aplicação que degrada ou indisponibiliza serviços.',
+    steps: [
+      s('triagem', 'DE.AE-04', 'Confirmar volume, vetores (volumétrico, protocolo, aplicação) e serviços afetados.'),
+      s('triagem', 'RS.MA-01', 'Acionar provedor de trânsito/CDN/anti-DDoS conforme contrato.'),
+      s('contencao', 'RS.MI-01', 'Ativar mitigação (scrubbing, rate limiting, geobloqueio, WAF).'),
+      s('analise', 'RS.AN-03', 'Verificar se o DDoS encobre outra atividade (distração).'),
+      s('recuperacao', 'RC.RP-05', 'Confirmar normalização de latência e disponibilidade.'),
+      s('recuperacao', 'RC.CO-04', 'Atualizar página de status para clientes.'),
+      s('pos', 'ID.IM-03', 'Revisar capacidade e runbooks de mitigação.'),
+    ],
+  },
+  {
+    id: 'account', name: 'Comprometimento de conta / credenciais', category: 'Comprometimento de conta',
+    summary: 'Uso indevido de credenciais válidas, incluindo contas privilegiadas e de nuvem.',
+    steps: [
+      s('triagem', 'DE.AE-02', 'Validar logins anômalos (viagem impossível, IP/ASN incomum, MFA fatigue).'),
+      s('contencao', 'RS.MI-01', 'Bloquear conta, revogar sessões/tokens e chaves de API.'),
+      s('analise', 'RS.AN-03', 'Levantar ações realizadas pela conta e acessos a dados.'),
+      s('analise', 'RS.AN-06', 'Registrar consultas e resultados na linha do tempo.'),
+      s('erradicacao', 'RS.MI-02', 'Remover persistências (MFA adicionados, apps, chaves, regras).'),
+      s('recuperacao', 'RC.RP-02', 'Reativar a conta com nova credencial e MFA resistente a phishing.'),
+      s('pos', 'ID.IM-03', 'Revisar política de acesso condicional e privilégios (PR.AA).'),
+    ],
+  },
+  {
+    id: 'malware', name: 'Malware em endpoint', category: 'Malware',
+    summary: 'Código malicioso executado em estação ou servidor.',
+    steps: [
+      s('triagem', 'DE.AE-07', 'Enriquecer hashes e domínios com CTI e sandbox.'),
+      s('contencao', 'RS.MI-01', 'Isolar o host via EDR.'),
+      s('analise', 'RS.AN-07', 'Coletar triagem forense (memória, artefatos de execução, persistências).'),
+      s('analise', 'DE.AE-03', 'Varrer o ambiente pelos IOCs encontrados.'),
+      s('erradicacao', 'RS.MI-02', 'Reimagem ou limpeza validada do host.'),
+      s('recuperacao', 'RC.RP-05', 'Devolver o equipamento ao usuário após validação.'),
+      s('pos', 'ID.IM-03', 'Ajustar regras de detecção e bloqueio.'),
+    ],
+  },
+  {
+    id: 'supply', name: 'Incidente em fornecedor / cadeia de suprimentos', category: 'Cadeia de suprimentos / terceiro',
+    summary: 'Comprometimento de fornecedor, software ou serviço de terceiro que afeta a organização.',
+    steps: [
+      s('triagem', 'RS.MA-01', 'Acionar o fornecedor pelos canais contratuais (GV.SC-08) e solicitar detalhes.'),
+      s('triagem', 'DE.AE-04', 'Mapear onde o produto/serviço é usado e quais dados ele acessa.'),
+      s('contencao', 'RS.MI-01', 'Suspender integrações, rotacionar credenciais compartilhadas e bloquear atualizações suspeitas.'),
+      s('analise', 'RS.AN-03', 'Procurar IOCs publicados pelo fornecedor no ambiente.'),
+      s('analise', 'RS.CO-03', 'Coordenar comunicação com o fornecedor e demais afetados.'),
+      s('recuperacao', 'RC.RP-03', 'Validar integridade de versões corrigidas antes da reinstalação.'),
+      s('pos', 'ID.IM-02', 'Revisar cláusulas contratuais de notificação e exercícios conjuntos.'),
+    ],
+  },
+];
+
+export const playbookById = Object.fromEntries(PLAYBOOKS.map((p) => [p.id, p]));
