@@ -5,26 +5,34 @@ import { STATUSES, CATEGORIES_INCIDENT, TLP } from '../core/nist.js';
 import { FACTORS, SEVERITIES, computeSeverity, priorityScore, csfProgress } from '../core/engine.js';
 import { PLAYBOOKS, playbookById } from '../data/playbooks.js';
 import { unpackFiles } from '../core/files.js';
+import { procedureTask } from './reader.js';
 import { ic, toast, confirmBox, sevBadge, statusBadge, when, field, input, dt, textarea, select, formData, empty, bar, tlpBadge } from '../ui.js';
 
 export function factorFields(inc) {
   return html`${Object.entries(FACTORS).map(([k, f]) => field(f.label, select(k, f.opts.map((t, v) => ({ v, t: `${v} — ${t}` })), inc[k] ?? 0, 'data-type="number"')))}`;
 }
 
-export function playbookTasks(pbId) {
-  const pb = playbookById[pbId];
-  return pb ? pb.steps.map((s, n) => ({ id: `pb-${pbId}-${n}-${Math.random().toString(36).slice(2, 6)}`, title: s.title, phase: s.phase, csf: s.csf, owner: '', due: null, status: 'aberta', playbook: pbId })) : [];
+// Abas compartilhadas entre Incidentes e a fila de eventos adversos.
+export function sectionTabs(cur, db) {
+  const pend = db.events.filter((e) => e.status === 'novo' || e.status === 'analise').length;
+  return html`<nav class="tabs"><a class="tab ${cur === 'incidentes' ? 'on' : ''}" href="#/incidentes">${ic('alert')} Incidentes</a>
+    <a class="tab ${cur === 'eventos' ? 'on' : ''}" href="#/eventos">${ic('radar')} Fila de eventos${pend ? html` <em>${pend}</em>` : ''}</a></nav>`;
 }
 
-function newForm(db) {
+export function playbookTasks(pbId) {
+  const pb = playbookById[pbId];
+  return pb ? pb.steps.map((s, n) => ({ id: `pb-${pbId}-${n}-${Math.random().toString(36).slice(2, 6)}`, title: s.title, detail: s.detail, role: s.role, phase: s.phase, csf: s.csf, owner: '', due: null, status: 'aberta', playbook: pbId })) : [];
+}
+
+function newForm(db, q) {
   const now = new Date().toISOString();
   return html`<div class="page">
     <div class="page-head"><div><h1>Declarar incidente</h1><p class="muted">Registre, categorize e priorize (DE.AE-08, RS.MA-02, RS.MA-03).</p></div></div>
     <form class="card" id="newinc">
       <div class="form-grid">
         <div class="span2">${field('Título', input('title', '', 'required placeholder="Ex.: Ransomware no servidor de arquivos"'))}</div>
-        ${field('Categoria', select('category', CATEGORIES_INCIDENT, 'Outro'))}
-        ${field('Playbook', select('playbook', [{ v: '', t: '— nenhum —' }, ...PLAYBOOKS.map((p) => ({ v: p.id, t: p.name }))], ''), 'As etapas viram tarefas do incidente.')}
+        ${field('Categoria', select('category', CATEGORIES_INCIDENT, playbookById[q.get('pb')]?.category || 'Outro'))}
+        ${field('Playbook', select('playbook', [{ v: '', t: '— nenhum —' }, ...PLAYBOOKS.map((p) => ({ v: p.id, t: p.name }))], q.get('pb') || ''), 'As etapas viram tarefas do incidente.')}
         <div class="span2">${field('Descrição', textarea('description', '', 'rows="3"'))}</div>
         ${field('Primeira atividade maliciosa (se conhecida)', dt('occurredAt', null))}
         ${field('Detectado em', dt('detectedAt', now, 'required'))}
@@ -46,7 +54,7 @@ export default {
   title: (p) => (p[0] === 'novo' ? 'Declarar incidente' : 'Incidentes'),
   render([sub], ctx) {
     const db = store.get();
-    if (sub === 'novo') return newForm(db);
+    if (sub === 'novo') return newForm(db, ctx.query);
     const q = ctx.query;
     const view = q.get('v') || 'lista';
     const fs = q.get('status') || '', fsev = q.get('sev') || '', fcat = q.get('cat') || '';
@@ -62,6 +70,7 @@ export default {
           <a class="btn primary" href="#/incidentes/novo">${ic('plus')} Declarar incidente</a>
         </div>
       </div>
+      ${sectionTabs('incidentes', db)}
       <div class="filters">
         <div class="seg"><a class="${view === 'lista' ? 'on' : ''}" href="${link('v', '')}">${ic('list')} Lista</a><a class="${view === 'quadro' ? 'on' : ''}" href="${link('v', 'quadro')}">${ic('board')} Quadro</a></div>
         <select data-filter="status">${[{ v: '', t: 'Todos os estados' }, ...STATUSES.map((s) => ({ v: s.id, t: s.name }))].map((o) => html`<option value="${o.v}" ${o.v === fs ? 'selected' : ''}>${o.t}</option>`)}</select>
@@ -97,6 +106,8 @@ export default {
         d.awareAt = d.declaredAt;
         d.csf = { 'DE.AE-08': { done: true, at: d.declaredAt, note: '' }, 'RS.MA-03': { done: true, at: d.declaredAt, note: 'Priorizado na declaração' } };
         if (playbook) { d.playbooks = [playbook]; d.tasks = playbookTasks(playbook); }
+        const pop = db.procedures.find((p) => p.id === ctx.query.get('pop'));
+        if (pop) d.tasks = [...(d.tasks || []), procedureTask(pop, { roles: {}, status: 'triagem' })];
         const inc = await store.createIncident(d);
         ctx.go(`#/incidente/${inc.id}`);
       });

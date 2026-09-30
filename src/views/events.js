@@ -2,6 +2,7 @@
 import * as store from '../core/store.js';
 import { html } from '../core/util.js';
 import { CATEGORIES_INCIDENT } from '../core/nist.js';
+import { sectionTabs } from './incidents.js';
 import { ic, field, input, dt, textarea, select, modal, toast, when, empty, confirmBox } from '../ui.js';
 
 const SOURCES = ['SIEM', 'EDR/XDR', 'IDS/IPS', 'Firewall', 'Gateway de e-mail', 'CSPM/Nuvem', 'DLP', 'Relato de usuário', 'Terceiro / fornecedor', 'CTI / ISAC', 'CERT / autoridade', 'Varredura de vulnerabilidades', 'Outro'];
@@ -27,13 +28,14 @@ export default {
     const f = ctx.query.get('f') || 'ativos';
     const list = db.events.filter((e) => (f === 'ativos' ? ['novo', 'analise'].includes(e.status) : f === 'todos' ? true : e.status === f))
       .sort((a, b) => new Date(b.observedAt) - new Date(a.observedAt));
-    const tab = (id, label) => html`<a class="tab ${f === id ? 'on' : ''}" href="#/eventos?f=${id}">${label}</a>`;
+    const tab = (id, label) => html`<a class="${f === id ? 'on' : ''}" href="#/eventos?f=${id}">${label}</a>`;
     return html`<div class="page">
       <div class="page-head">
-        <div><h1>Eventos adversos</h1><p class="muted">Monitoramento contínuo e análise de eventos (DE.CM, DE.AE). Declare incidente quando os critérios forem atendidos (DE.AE-08).</p></div>
+        <div><h1>Incidentes</h1><p class="muted">Eventos adversos aguardando triagem. Declare incidente quando os critérios forem atendidos (DE.AE-08).</p></div>
         <button class="btn primary" data-act="new">${ic('plus')} Novo evento</button>
       </div>
-      <div class="tabs">${tab('ativos', 'Na fila')}${tab('declarado', 'Declarados')}${tab('descartado', 'Descartados')}${tab('todos', 'Todos')}</div>
+      ${sectionTabs('eventos', db)}
+      <div class="seg subseg">${tab('ativos', 'Na fila')}${tab('declarado', 'Declarados')}${tab('descartado', 'Descartados')}${tab('todos', 'Todos')}</div>
       ${list.length ? html`<div class="cards">${list.map((e) => {
         const asset = db.assets.find((a) => a.id === e.asset);
         return html`<article class="card ev ev-${e.severity}">

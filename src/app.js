@@ -8,38 +8,33 @@ import events from './views/events.js';
 import incidents from './views/incidents.js';
 import incident from './views/incident.js';
 import report from './views/report.js';
-import playbooks from './views/playbooks.js';
-import prep from './views/prep.js';
-import improvements from './views/improvements.js';
+import shelf from './views/shelf.js';
+import reader from './views/reader.js';
+import org from './views/org.js';
+import { BOOK_CSS } from './book.js';
 import audit from './views/audit.js';
 import reference from './views/reference.js';
 import settings from './views/settings.js';
 import welcome from './views/welcome.js';
 import assignments from './views/assignments.js';
 import reports from './views/reports.js';
-import library from './views/library.js';
 import { saveFile } from './core/files.js';
 import { NIST_LINKS } from './core/nist.js';
 
 const NAV = [
-  { group: 'Operação', items: [
-    { href: '#/', label: 'Painel', icon: 'dash' },
-    { href: '#/eventos', label: 'Eventos adversos', icon: 'radar', badge: (db) => db.events.filter((e) => e.status === 'novo' || e.status === 'analise').length },
-    { href: '#/incidentes', label: 'Incidentes', icon: 'alert', badge: (db) => db.incidents.filter((i) => i.status !== 'encerrado').length },
-    { href: '#/atribuicoes', label: 'Atribuições', icon: 'users', badge: (db) => { const me = store.me(); return me ? db.incidents.filter((i) => i.status !== 'encerrado').flatMap((i) => i.tasks).filter((t) => t.owner === me.id && t.status !== 'concluida').length : 0; } },
-    { href: '#/relatorios', label: 'Relatórios', icon: 'chart' },
-  ] },
-  { group: 'Processos e tecnologia', items: [
-    { href: '#/biblioteca/tecnologias', match: '/biblioteca', label: 'Tecnologias e POPs', icon: 'layers' },
-    { href: '#/playbooks', label: 'Playbooks', icon: 'book' },
-    { href: '#/preparacao', label: 'Preparação', icon: 'shield' },
-    { href: '#/melhorias', label: 'Melhorias', icon: 'up' },
-  ] },
-  { group: 'Governança', items: [
-    { href: '#/auditoria', label: 'Auditoria', icon: 'list' },
-    { href: '#/referencia', label: 'NIST SP 800-61r3', icon: 'info' },
-    { href: '#/config', label: 'Configurações', icon: 'gear' },
-  ] },
+  { href: '#/', label: 'Início', icon: 'dash' },
+  { href: '#/incidentes', match: ['/incidente', '/eventos'], label: 'Incidentes', icon: 'alert', badge: (db) => db.incidents.filter((i) => i.status !== 'encerrado').length },
+  { href: '#/biblioteca', match: ['/biblioteca', '/livro'], label: 'Biblioteca', icon: 'book' },
+  { href: '#/relatorios', label: 'Relatórios', icon: 'chart' },
+  { href: '#/organizacao', match: ['/organizacao', '/atribuicoes'], label: 'Organização', icon: 'users' },
+  { href: '#/config', match: ['/config', '/auditoria', '/referencia'], label: 'Configurações', icon: 'gear' },
+];
+
+// Rotas antigas continuam funcionando.
+const REDIRECTS = [
+  [/^\/playbooks\/([a-z-]+)$/, (m) => `#/livro/pb-${m[1]}`], [/^\/playbooks$/, () => '#/biblioteca'],
+  [/^\/biblioteca\/(tecnologias|processos)$/, (m) => `#/organizacao/${m[1]}`], [/^\/biblioteca\/procedimentos$/, () => '#/biblioteca?f=procedimento'],
+  [/^\/preparacao(?:\/([a-z-]+))?$/, (m) => `#/organizacao/${m[1] || 'prontidao'}`], [/^\/melhorias$/, () => '#/organizacao/melhorias'],
 ];
 
 const ROUTES = [
@@ -50,10 +45,9 @@ const ROUTES = [
   [/^\/incidente\/([^/]+)(?:\/([a-z-]+))?$/, incident],
   [/^\/atribuicoes$/, assignments],
   [/^\/relatorios(?:\/([a-z-]+))?$/, reports],
-  [/^\/biblioteca(?:\/([a-z-]+))?$/, library],
-  [/^\/playbooks(?:\/([a-z-]+))?$/, playbooks],
-  [/^\/preparacao(?:\/([a-z-]+))?$/, prep],
-  [/^\/melhorias$/, improvements],
+  [/^\/biblioteca$/, shelf],
+  [/^\/livro\/([^/]+)$/, reader],
+  [/^\/organizacao(?:\/([a-z-]+))?$/, org],
   [/^\/auditoria$/, audit],
   [/^\/referencia$/, reference],
   [/^\/config$/, settings],
@@ -66,13 +60,13 @@ export const go = (h) => { if (location.hash === h) route(); else location.hash 
 
 function renderNav(path) {
   const db = store.get();
-  nav.innerHTML = String(html`${NAV.map((g) => html`<div class="nav-group"><p>${g.group}</p>${g.items.map((n) => {
-    const p = n.match || n.href.slice(1);
-    const active = p === '/' ? path === '/' : path.startsWith(p) || (p === '/incidentes' && path.startsWith('/incidente/'));
+  nav.innerHTML = String(html`<div class="nav-list">${NAV.map((n) => {
+    const ms = n.match || [n.href.slice(1)];
+    const active = n.href === '#/' ? path === '/' : ms.some((p) => path.startsWith(p));
     const b = db && n.badge ? n.badge(db) : 0;
     return html`<a href="${n.href}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}>${ic(n.icon)}<span>${n.label}</span>${b ? html`<em class="nb">${b}</em>` : ''}</a>`;
-  })}</div>`)}
-  <div class="nav-foot"><a href="${NIST_LINKS.pdf}" target="_blank" rel="noopener">${ic('ext')}<span>NIST SP 800-61r3 (PDF oficial)</span></a></div>`);
+  })}</div>
+  <div class="nav-foot"><a href="${NIST_LINKS.pdf}" target="_blank" rel="noopener" class="nav-nist">${ic('file')}<span><b>NIST SP 800-61r3</b><small>documento oficial (PDF)</small></span></a></div>`);
   document.getElementById('org').textContent = db?.org.name || '';
   renderUser();
 }
@@ -108,6 +102,7 @@ export async function route() {
     welcome.mount(root, { start });
     return;
   }
+  for (const [re, to] of REDIRECTS) { const m = path.match(re); if (m) { location.replace(to(m)); return; } }
   renderNav(path);
   cleanup?.(); cleanup = null;
   for (const [re, view] of ROUTES) {
@@ -188,7 +183,7 @@ q.addEventListener('input', () => {
     }
   }
   for (const e of db.events) if (e.id.toLowerCase().includes(t) || e.title.toLowerCase().includes(t)) hits.push({ href: '#/eventos', label: `${e.id} — ${e.title}`, sub: 'Evento adverso' });
-  for (const a of db.assets) if (a.name.toLowerCase().includes(t) || (a.ip || '').includes(t)) hits.push({ href: '#/preparacao/ativos', label: a.name, sub: `Ativo · ${a.type}` });
+  for (const a of db.assets) if (a.name.toLowerCase().includes(t) || (a.ip || '').includes(t)) hits.push({ href: '#/organizacao/ativos', label: a.name, sub: `Ativo · ${a.type}` });
   results.innerHTML = hits.length
     ? hits.slice(0, 12).map((h) => `<a href="${esc(h.href)}"><strong>${esc(h.label)}</strong><small>${esc(h.sub)}</small></a>`).join('')
     : '<p class="muted">Nada encontrado.</p>';
@@ -206,6 +201,9 @@ document.getElementById('menu').addEventListener('click', () => document.body.cl
 // Sincroniza entre abas abertas.
 window.addEventListener('storage', (e) => { if (e.key === 'blade-ir-db') { store.load(); rerender(); } });
 window.addEventListener('hashchange', () => { route(); window.scrollTo(0, 0); });
+
+// Estilos dos livros (os mesmos usados nos downloads).
+document.head.appendChild(Object.assign(document.createElement('style'), { textContent: BOOK_CSS }));
 
 store.load();
 route();

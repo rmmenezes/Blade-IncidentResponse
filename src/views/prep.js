@@ -68,11 +68,7 @@ export default {
           <td><div class="seg sm">${LEVELS.map((l, i) => html`<button class="${(db.readiness[r.id] || 0) === i ? 'on' : ''}" data-ready="${r.id}" data-lvl="${i}" title="${l}">${i}</button>`)}</div></td></tr>`)}</tbody></table></div>
       </section>`;
     }
-    return html`<div class="page">
-      <div class="page-head"><div><h1>Preparação</h1><p class="muted">Atividades contínuas de Governar, Identificar e Proteger que sustentam a resposta.</p></div></div>
-      <nav class="tabs">${TABS.map(([k, t]) => html`<a class="tab ${k === tab ? 'on' : ''}" href="#/preparacao/${k}">${t}</a>`)}</nav>
-      ${body}
-    </div>`;
+    return body; // a página Organização fornece cabeçalho e abas
   },
   mount(el, _, ctx) {
     const db = store.get();

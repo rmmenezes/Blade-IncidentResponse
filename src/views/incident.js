@@ -7,11 +7,15 @@ import { saveFile, getBlob, objectURL, deleteFile, packFiles, isImage, fmtSize, 
 import { PLAYBOOKS, playbookById } from '../data/playbooks.js';
 import { ic, sevBadge, statusBadge, fnBadge, tlpBadge, field, input, dt, textarea, select, modal, confirmBox, toast, when, empty, bar } from '../ui.js';
 import { playbookTasks } from './incidents.js';
+import { procedureTask } from './reader.js';
+import { art } from '../art.js';
 
 const TABS = [
-  ['visao', 'Visão geral'], ['linha', 'Cronologia'], ['tarefas', 'Tarefas e passos'], ['equipe', 'Equipe'], ['analise', 'Análise'], ['evidencias', 'Evidências'],
-  ['anexos', 'Arquivos'], ['iocs', 'Indicadores'], ['comunicacao', 'Comunicação'], ['recuperacao', 'Recuperação'], ['licoes', 'Lições aprendidas'], ['nist', 'Conformidade NIST'],
+  ['visao', 'Resumo', 'dash'], ['tarefas', 'Plano de ação', 'check'], ['linha', 'Cronologia e arquivos', 'clock'], ['analise', 'Análise', 'search'],
+  ['evidencias', 'Evidências e IOCs', 'lock'], ['comunicacao', 'Comunicação', 'comms'], ['encerramento', 'Encerramento', 'shield'],
 ];
+// Abas antigas apontam para as novas.
+const ALIAS = { equipe: 'visao', anexos: 'linha', iocs: 'evidencias', recuperacao: 'encerramento', licoes: 'encerramento', nist: 'encerramento' };
 const TL_TYPES = { deteccao: 'Detecção', acao: 'Ação', evidencia: 'Evidência', decisao: 'Decisão', comunicacao: 'Comunicação', nota: 'Nota', status: 'Estado', sistema: 'Sistema' };
 const TASK_ST = { aberta: 'Aberta', andamento: 'Em andamento', bloqueada: 'Bloqueada', concluida: 'Concluída' };
 const AUDIENCES = { interno: 'Interno', externo: 'Externo', lideranca: 'Liderança', regulador: 'Regulador', titulares: 'Titulares de dados', clientes: 'Clientes', publico: 'Público / imprensa', policia: 'Autoridade policial', fornecedor: 'Fornecedor / terceiro', seguradora: 'Seguradora', csirt: 'CSIRT / ISAC' };
@@ -72,7 +76,7 @@ function tabVisao(inc, db) {
         ${field('TLP (compartilhamento)', bs('tlp', inc, TLP))}
         <div class="span2">${field('Descrição', bt('description', inc, 'rows="4"'))}</div>
       </div>
-      <h3>Marcos</h3>
+      <details class="more"><summary>Marcos do incidente (datas)</summary>
       <div class="form-grid">
         ${field('Primeira atividade maliciosa', bd('occurredAt', inc))}
         ${field('Detectado em', bd('detectedAt', inc))}
@@ -82,7 +86,7 @@ function tabVisao(inc, db) {
         ${field('Erradicado em', bd('eradicatedAt', inc))}
         ${field('Recuperado em', bd('recoveredAt', inc))}
         ${field('Encerrado em', bd('closedAt', inc))}
-      </div>
+      </div></details>
     </section>
     <div class="stack">
       <section class="card">
@@ -100,10 +104,7 @@ function tabVisao(inc, db) {
           <b>${s.label}</b><span>meta ${when(s.due)}</span>
           <span>${s.done ? `concluída ${fmtDate(s.doneAt)}${s.late ? ' (fora do SLA)' : ''}` : s.late ? `atrasada ${fmtDuration(-s.remaining)}` : `restam ${fmtDuration(s.remaining)}`}</span></li>`)}</ul>
       </section>
-      <section class="card danger-zone">
-        <h2>Zona de risco</h2>
-        <button class="btn danger sm" data-act="delete">${ic('trash')} Excluir incidente</button>
-      </section>
+
     </div>
   </div>`;
 }
@@ -129,14 +130,17 @@ function tabEquipe(inc, db) {
           <td class="small">${c.email}<br>${c.phone}</td>
           <td>${(inc.team || []).includes(id) ? html`<button class="icon-btn" data-team-del="${id}" aria-label="Remover da equipe">${ic('x')}</button>` : ''}</td></tr>`; })}</tbody></table></div>`
         : empty('Nenhuma pessoa atribuída.')}
-      <p class="small muted">Cadastre pessoas em <a href="#/preparacao/equipe">Preparação → Equipe</a>. Ao aplicar procedimentos, as tarefas são atribuídas automaticamente pelo papel.</p>
+      <p class="small muted">Cadastre pessoas em <a href="#/organizacao/equipe">Organização → Equipe</a>. Ao aplicar procedimentos, as tarefas são atribuídas automaticamente pelo papel.</p>
     </section>
     <section class="card">
       <h2>Papéis e responsabilidades <small class="muted">GV.RR-02</small></h2>
-      <div class="form-grid">${ROLES.map((r) => field(r.name, bs(`roles.${r.id}`, inc, contactOpts(db))))}</div>
+      <div class="form-grid">${ROLES.filter((r) => CORE_ROLES.includes(r.id)).map((r) => field(r.name, bs(`roles.${r.id}`, inc, contactOpts(db))))}</div>
+      <details class="more"><summary>Outros papéis</summary><div class="form-grid">${ROLES.filter((r) => !CORE_ROLES.includes(r.id)).map((r) => field(r.name, bs(`roles.${r.id}`, inc, contactOpts(db))))}</div></details>
     </section>
-  </div>`;
+  </div>
+  <p class="right small"><button class="btn ghost sm danger-link" data-act="delete">${ic('trash')} Excluir incidente</button></p>`;
 }
+const CORE_ROLES = ['lead', 'handler', 'tech', 'legal', 'comms'];
 export const initials = (n = '') => n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
 function tabLinha(inc) {
@@ -178,7 +182,7 @@ function tabTarefas(inc, db) {
       <button class="btn sm primary" data-act="task-add">${ic('plus')} Nova tarefa</button></div></div>
     <p class="small muted">${db.org.enforceGates ? html`${ic('lock')} Controle de fases ativo: tarefas <b>obrigatórias</b> precisam estar concluídas para avançar o estado.` : html`Tarefas <b>obrigatórias</b> geram alertas ao avançar de fase. Ative o bloqueio em <a href="#/config">Configurações</a>.`}
       ${blockers.length ? html` · <b class="txt-late">${blockers.length} obrigatória(s) pendente(s)</b>` : ''}</p>
-    ${inc.playbooks.length ? html`<p class="small muted">Playbooks aplicados: ${inc.playbooks.map((p) => playbookById[p]?.name).join(', ')}</p>` : ''}
+    ${inc.playbooks.length ? html`<div class="applied">${inc.playbooks.map((id2) => playbookById[id2]).filter(Boolean).map((p) => html`<a class="applied-bk" href="#/livro/pb-${p.id}" style="--bk:${p.color}"><span class="mini-cover">${raw(art(p.art))}</span><span><small class="muted">Playbook aplicado</small><b>${p.name}</b><small>Abrir o livro →</small></span></a>`)}</div>` : html`<a class="applied-bk ghost" href="#/biblioteca"><span class="mini-cover">${raw(art('guide'))}</span><span><small class="muted">Nenhum playbook aplicado</small><b>Escolher na biblioteca</b><small>ou use o seletor acima</small></span></a>`}
     ${phases.map((ph) => {
       const ts = inc.tasks.filter((t) => t.phase === ph.id);
       if (!ts.length) return '';
@@ -187,7 +191,7 @@ function tabTarefas(inc, db) {
         return html`<div class="task ${t.status === 'concluida' ? 'done' : ''}">
         <div class="task-main">
           <input type="checkbox" data-task-done="${t.id}" ${t.status === 'concluida' ? 'checked' : ''} aria-label="Concluída">
-          <div class="task-title"><span>${t.title}</span>
+          <div class="task-title"><span>${t.title}</span>${t.detail ? html`<small class="muted">${t.detail}</small>` : ''}
             <div class="row small">${t.required ? html`<span class="badge warn">obrigatória</span>` : ''}${t.procedure ? html`<span class="badge ghost">POP</span>` : ''}${t.csf ? fnBadge(t.csf) : ''}
               ${late ? html`<b class="txt-late">atrasada</b>` : ''}${t.doneBy ? html`<span class="muted">concluída por ${t.doneBy} em ${fmtDate(t.doneAt)}</span>` : ''}</div>
             ${t.steps?.length ? html`<div class="row small">${bar(p)}<span class="muted">${t.steps.filter((s) => s.done).length}/${t.steps.length} passos</span></div>` : ''}</div>
@@ -237,7 +241,7 @@ function tabAnalise(inc, db) {
       ${field('Técnicas (IDs, ex.: T1078, T1486)', b('analysis.techniques', inc))}
     </section>
     <section class="card">
-      <div class="card-head"><h2>Tecnologias utilizadas na resposta</h2><a class="small" href="#/biblioteca/tecnologias">catálogo</a></div>
+      <div class="card-head"><h2>Tecnologias utilizadas na resposta</h2><a class="small" href="#/organizacao/tecnologias">catálogo</a></div>
       ${db.technologies.length ? html`<div class="chips col">${db.technologies.map((t) => html`<label class="chip"><input type="checkbox" data-tool="${t.id}" ${inc.tools.includes(t.id) ? 'checked' : ''}> ${t.name} <small class="muted">${t.category}</small></label>`)}</div>` : empty('Nenhuma tecnologia cadastrada.')}
     </section>
     <div class="stack">
@@ -254,7 +258,7 @@ function tabAnalise(inc, db) {
         </div>
       </section>
       <section class="card">
-        <div class="card-head"><h2>Ativos afetados</h2><a class="small" href="#/preparacao/ativos">inventário</a></div>
+        <div class="card-head"><h2>Ativos afetados</h2><a class="small" href="#/organizacao/ativos">inventário</a></div>
         ${db.assets.length ? html`<div class="chips col">${db.assets.map((x) => html`<label class="chip"><input type="checkbox" data-asset="${x.id}" ${inc.assets.includes(x.id) ? 'checked' : ''}> ${x.name} <small class="muted">${x.type} · ${x.criticality}</small></label>`)}</div>` : empty('Nenhum ativo cadastrado.')}
       </section>
       ${inc.sourceEvents.length ? html`<section class="card"><h2>Eventos de origem</h2><p>${inc.sourceEvents.join(', ')}</p></section>` : ''}
@@ -354,7 +358,7 @@ function tabLicoes(inc, db) {
     <section class="card">
       <div class="card-head"><h2>Melhorias geradas</h2><button class="btn sm primary" data-act="imp-add">${ic('plus')} Registrar melhoria</button></div>
       ${imps.length ? html`<ul class="list">${imps.map((p) => html`<li><b>${p.title}</b><span class="muted">${p.csf} · ${p.status} · ${contactName(db, p.owner) || 'sem responsável'}</span></li>`)}</ul>` : empty('Nenhuma melhoria registrada a partir deste incidente.')}
-      <p class="small muted">As melhorias ficam no <a href="#/melhorias">backlog de melhorias</a> e alimentam Governar, Identificar e Proteger.</p>
+      <p class="small muted">As melhorias ficam no <a href="#/organizacao/melhorias">backlog de melhorias</a> e alimentam Governar, Identificar e Proteger.</p>
     </section>
   </div>`;
 }
@@ -372,7 +376,15 @@ function tabNist(inc) {
   </section>`;
 }
 
-const RENDER = { visao: tabVisao, equipe: tabEquipe, anexos: tabAnexos, linha: tabLinha, tarefas: tabTarefas, analise: tabAnalise, evidencias: tabEvidencias, iocs: tabIocs, comunicacao: tabComunicacao, recuperacao: tabRecuperacao, licoes: tabLicoes, nist: tabNist };
+const RENDER = {
+  visao: (i, db) => html`${tabVisao(i, db)}${tabEquipe(i, db)}`,
+  tarefas: tabTarefas,
+  linha: (i, db) => html`${tabLinha(i, db)}${tabAnexos(i, db)}`,
+  analise: tabAnalise,
+  evidencias: (i, db) => html`${tabEvidencias(i, db)}${tabIocs(i, db)}`,
+  comunicacao: tabComunicacao,
+  encerramento: (i, db) => html`${tabRecuperacao(i, db)}${tabLicoes(i, db)}${tabNist(i, db)}`,
+};
 
 /* ---------- Modelos de mensagem ---------- */
 function templates(inc, db) {
@@ -392,6 +404,7 @@ export default {
     const db = store.get();
     const inc = store.incident(id);
     if (!inc) return html`<div class="page"><div class="card"><h2>Incidente ${id} não encontrado</h2><a class="btn" href="#/incidentes">Voltar</a></div></div>`;
+    tab = ALIAS[tab] || tab;
     if (!RENDER[tab]) tab = 'visao';
     const cur = statusIndex(inc.status);
     const p = csfProgress(inc);
@@ -407,12 +420,14 @@ export default {
       </div>
       <ol class="stepper">${STATUSES.map((s, i) => html`<li class="${i < cur ? 'past' : i === cur ? 'cur' : ''}"><button data-status="${s.id}" title="${s.hint}" ${i === cur ? 'aria-current="step"' : ''}><span>${i + 1}</span>${s.name}</button></li>`)}</ol>
       <p class="hint-line">${ic('info')} ${statusById[inc.status].hint}</p>
-      <nav class="tabs" aria-label="Seções do incidente">${TABS.map(([k, t]) => html`<a class="tab ${k === tab ? 'on' : ''}" href="#/incidente/${inc.id}/${k}">${t}${k === 'tarefas' ? html` <em>${inc.tasks.filter((x) => x.status !== 'concluida').length}</em>` : k === 'iocs' ? html` <em>${inc.iocs.length}</em>` : k === 'evidencias' ? html` <em>${inc.evidence.length}</em>` : k === 'anexos' ? html` <em>${inc.attachments.length}</em>` : k === 'equipe' ? html` <em>${teamIds(inc).length}</em>` : ''}</a>`)}</nav>
+      <nav class="tabs inc-tabs" aria-label="Seções do incidente">${TABS.map(([k, t, icon]) => { const n = k === 'tarefas' ? inc.tasks.filter((x) => x.status !== 'concluida').length : k === 'linha' ? inc.attachments.length : k === 'evidencias' ? inc.evidence.length + inc.iocs.length : 0;
+        return html`<a class="tab ${k === tab ? 'on' : ''}" href="#/incidente/${inc.id}/${k}">${ic(icon)} ${t}${n ? html` <em>${n}</em>` : ''}</a>`; })}</nav>
       ${RENDER[tab](inc, db)}
     </div>`;
   },
 
   mount(el, [id, tab = 'visao'], ctx) {
+    tab = ALIAS[tab] || tab;
     const db = store.get();
     const inc = store.incident(id);
     if (!inc) return;
@@ -478,18 +493,14 @@ export default {
       }
       if (t.dataset.act === 'apply-pop' && t.value) {
         const pop = db.procedures.find((x) => x.id === t.value);
-        const roles = pop.steps.map((x) => x.role).filter(Boolean);
-        const mainRole = roles.sort((a2, b2) => roles.filter((r) => r === b2).length - roles.filter((r) => r === a2).length)[0];
-        inc.tasks.push({ id: uid('k'), title: `Procedimento: ${pop.name}`, phase: pop.phase || inc.status, csf: pop.csf, procedure: pop.id, required: true, status: 'aberta', due: null,
-          owner: inc.roles[mainRole] || inc.roles.handler || inc.roles.lead || '',
-          steps: pop.steps.map((x) => ({ id: uid('s'), text: x.title, role: x.role, tech: x.tech, done: false })) });
+        inc.tasks.push(procedureTask(pop, inc));
         toast(`Procedimento aplicado com ${pop.steps.length} passos.`);
         return save(`Procedimento aplicado: ${pop.name} v${pop.version}`);
       }
       if (t.dataset.act === 'apply-pb' && t.value) {
         const pb = playbookById[t.value];
         if (inc.playbooks.includes(pb.id) && !(await confirmBox('Playbook já aplicado', 'Adicionar as etapas novamente?'))) { t.value = ''; return; }
-        inc.tasks.push(...playbookTasks(pb.id).map((k) => ({ ...k, owner: inc.roles[PHASE_ROLE[k.phase]] || inc.roles.handler || inc.roles.lead || '' })));
+        inc.tasks.push(...playbookTasks(pb.id).map((k) => ({ ...k, owner: inc.roles[k.role] || inc.roles[PHASE_ROLE[k.phase]] || inc.roles.handler || inc.roles.lead || '' })));
         inc.playbooks = [...new Set([...inc.playbooks, pb.id])];
         toast(`${pb.steps.length} tarefas adicionadas.`);
         return save(`Playbook aplicado: ${pb.name}`);
@@ -719,7 +730,7 @@ export default {
     drop?.addEventListener('dragleave', () => drop.classList.remove('over'));
     drop?.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); addAndRender([...e.dataTransfer.files]); });
     const onPaste = (e) => {
-      if (tab !== 'anexos' || e.target.closest?.('input,textarea')) return;
+      if (tab !== 'linha' || e.target.closest?.('input,textarea')) return;
       const files = [...(e.clipboardData?.files || [])].map((f, n) => (f.name && f.name !== 'image.png' ? f : new File([f], `captura-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}${n ? '-' + n : ''}.png`, { type: f.type })));
       if (files.length) { e.preventDefault(); addAndRender(files); }
     };

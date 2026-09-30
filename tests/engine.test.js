@@ -135,3 +135,33 @@ test('catálogo de procedimentos referencia papéis e tecnologias válidos', asy
     for (const s of p.steps) { if (s.role) assert.ok(roles.has(s.role), `${p.id}: ${s.role}`); if (s.tech) assert.ok(techs.has(s.tech), `${p.id}: ${s.tech}`); }
   }
 });
+
+test('biblioteca gera livros completos e exportações', async () => {
+  const { allBooks, bookDoc, toMarkdown, standaloneHTML, bookChapters } = await import('../src/book.js');
+  const { PLAYBOOKS } = await import('../src/data/playbooks.js');
+  const db = await demoDB();
+  const books = allBooks(db);
+  assert.equal(books.filter((b) => b.kind === 'playbook').length, PLAYBOOKS.length);
+  assert.ok(books.some((b) => b.kind === 'plano') && books.some((b) => b.kind === 'guia'));
+  for (const b of books) {
+    const doc = String(bookDoc(b, db));
+    assert.match(doc, /bk-cover/, b.id);
+    assert.ok(bookChapters(b, db).length >= 4, b.id);
+    assert.ok(toMarkdown(b, db).startsWith(`# ${b.title}`), b.id);
+  }
+  const all = standaloneHTML(books, db, 'Teste');
+  assert.match(all, /^<!doctype html>/);
+  assert.ok(all.includes('.bk-cover{'));
+});
+
+test('playbooks completos: todas as fases, papéis válidos e referências', async () => {
+  const { PLAYBOOKS } = await import('../src/data/playbooks.js');
+  const { ROLES } = await import('../src/core/nist.js');
+  const roles = new Set(ROLES.map((r) => r.id));
+  for (const p of PLAYBOOKS) {
+    assert.deepEqual(p.phases.map((x) => x.id).sort(), ['analise', 'contencao', 'erradicacao', 'pos', 'recuperacao', 'triagem'], p.id);
+    for (const s of p.steps) { assert.ok(roles.has(s.role), `${p.id}: ${s.role}`); assert.ok(s.detail, `${p.id}: ${s.title}`); }
+    for (const [r] of p.roles) assert.ok(roles.has(r), `${p.id} papel ${r}`);
+    assert.ok(p.references.length && p.mitre.every(([id]) => /^T\d{4}(\.\d{3})?$/.test(id)), p.id);
+  }
+});

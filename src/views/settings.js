@@ -14,7 +14,8 @@ export default {
   render() {
     const db = store.get();
     return html`<div class="page">
-      <div class="page-head"><div><h1>Configurações</h1><p class="muted">Políticas que governam a resposta (GV.PO, GV.RR, GV.RM).</p></div></div>
+      <div class="page-head"><div><h1>Configurações</h1><p class="muted">Políticas que governam a resposta (GV.PO, GV.RR, GV.RM).</p></div>
+        <div class="row"><a class="btn" href="#/auditoria">${ic('list')} Trilha de auditoria</a><a class="btn" href="#/referencia">${ic('info')} Referência NIST</a></div></div>
       <form class="card" id="org">
         <h2>Organização</h2>
         <div class="form-grid">

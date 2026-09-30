@@ -1,26 +1,31 @@
-import { html } from '../core/util.js';
+import { html, raw } from '../core/util.js';
 import { ic } from '../ui.js';
+import { art } from '../art.js';
 import { NIST_LINKS } from '../core/nist.js';
+
+const FEATURES = [
+  ['radar', 'Detectar e responder', 'Da triagem ao encerramento, com passos guiados e responsáveis definidos.'],
+  ['guide', 'Biblioteca em livros', '10 playbooks e 8 procedimentos completos para ler, aplicar e baixar.'],
+  ['evidence', 'Registro íntegro', 'Linha do tempo protegida por hash, evidências e arquivos com cadeia de custódia.'],
+  ['report', 'Relatórios prontos', 'Executivo, conformidade NIST, prazos regulatórios e lições aprendidas.'],
+];
 
 export default {
   render: () => html`<div class="page welcome">
-    <div class="hero">
-      <p class="eyebrow">Plataforma de resposta a incidentes · NIST SP 800-61r3</p>
-      <h1>Blade Incident Response</h1>
-      <p class="lead">Gestão completa de incidentes de cibersegurança alinhada ao <strong>NIST SP 800-61 Revision 3</strong> e às Funções do <strong>CSF 2.0</strong>: Governar, Identificar, Proteger, Detectar, Responder e Recuperar.</p>
-      <div class="row">
-        <button class="btn primary lg" data-start="demo">${ic('dash')} Explorar com dados de demonstração</button>
-        <button class="btn lg" data-start="empty">${ic('plus')} Começar ambiente vazio</button>
+    <section class="hero hero-xl">
+      <div class="hero-txt">
+        <p class="eyebrow">NIST SP 800-61 Rev. 3 · CSF 2.0</p>
+        <h1>Resposta a incidentes, do alerta à lição aprendida.</h1>
+        <p class="lead">A Blade organiza pessoas, playbooks e evidências para sua equipe responder com método, sem planilhas nem improviso.</p>
+        <div class="row">
+          <button class="btn primary lg" data-start="demo">${ic('dash')} Explorar com dados de exemplo</button>
+          <button class="btn lg" data-start="empty">${ic('plus')} Começar do zero</button>
+        </div>
+        <p class="muted small">Os dados ficam neste navegador. Documento de referência: <a href="${NIST_LINKS.pdf}" target="_blank" rel="noopener">NIST SP 800-61r3 (PDF)</a>.</p>
       </div>
-      <p class="muted small">Os dados ficam somente neste navegador. Use <em>Configurações → Exportar</em> para backup e o <em>pacote do incidente</em> para compartilhar. Referência: <a href="${NIST_LINKS.pdf}" target="_blank" rel="noopener">NIST SP 800-61 Rev. 3 (PDF oficial)</a>.</p>
-    </div>
-    <div class="grid3">
-      <div class="card"><h3>Detectar</h3><p>Fila de eventos adversos com triagem, correlação e declaração de incidentes por critérios definidos (DE.AE-08).</p></div>
-      <div class="card"><h3>Responder</h3><p>Priorização, playbooks, tarefas, IOCs, evidências com cadeia de custódia, linha do tempo à prova de adulteração e notificações regulatórias.</p></div>
-      <div class="card"><h3>Pessoas, processos e tecnologia</h3><p>Atribuição de equipe e tarefas, catálogo de tecnologias, processos e procedimentos operacionais com passos rastreáveis.</p></div>
-      <div class="card"><h3>Relatórios</h3><p>Executivo, operacional e SLAs, conformidade CSF, notificações regulatórias, IOCs, equipe e melhorias — com impressão em PDF e CSV.</p></div>
-      <div class="card"><h3>Recuperar e melhorar</h3><p>Critérios de recuperação, verificação de integridade, lições aprendidas e backlog de melhorias (ID.IM).</p></div>
-    </div>
+      <div class="hero-art">${raw(art('shield'))}</div>
+    </section>
+    <div class="features">${FEATURES.map(([a, t, d]) => html`<div class="feature"><span class="feature-art">${raw(art(a))}</span><h3>${t}</h3><p class="muted">${d}</p></div>`)}</div>
   </div>`,
   mount(el, { start }) {
     el.querySelectorAll('[data-start]').forEach((b) => b.addEventListener('click', () => start(b.dataset.start)));

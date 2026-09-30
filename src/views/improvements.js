@@ -13,17 +13,15 @@ export default {
     const owners = [{ v: '', t: '—' }, ...db.contacts.map((c) => ({ v: c.id, t: c.name }))];
     const list = [...db.improvements].sort((a, b) => (a.status === 'concluida') - (b.status === 'concluida') || PR.findIndex((p) => p.v === a.priority) - PR.findIndex((p) => p.v === b.priority));
     const now = new Date();
-    return html`<div class="page">
-      <div class="page-head"><div><h1>Melhorias contínuas</h1><p class="muted">Melhorias identificadas em incidentes, avaliações e exercícios (ID.IM-01 a ID.IM-04).</p></div>
-        <button class="btn primary" data-act="add">${ic('plus')} Nova melhoria</button></div>
-      <section class="card">${list.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Melhoria</th><th>Origem</th><th>CSF</th><th>Prioridade</th><th>Responsável</th><th>Prazo</th><th>Estado</th></tr></thead>
+    return html`<section class="card">
+        <div class="card-head"><h2>Melhorias contínuas <small class="muted">ID.IM</small></h2><button class="btn sm primary" data-act="add">${ic('plus')} Nova melhoria</button></div>
+        ${list.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Melhoria</th><th>Origem</th><th>CSF</th><th>Prioridade</th><th>Responsável</th><th>Prazo</th><th>Estado</th></tr></thead>
         <tbody>${list.map((p) => html`<tr class="${p.status === 'concluida' ? 'done' : ''}"><td>${p.title}</td>
-          <td>${p.source?.startsWith('INC-') ? html`<a href="#/incidente/${p.source}/licoes">${p.source}</a>` : p.source || '—'}</td>
+          <td>${p.source?.startsWith('INC-') ? html`<a href="#/incidente/${p.source}/encerramento">${p.source}</a>` : p.source || '—'}</td>
           <td>${p.csf ? fnBadge(p.csf) : ''}</td><td><span class="badge crit-${p.priority}">${p.priority}</span></td>
           <td>${select('', owners, p.owner, `data-id="${p.id}" data-k="owner" aria-label="Responsável"`)}</td>
           <td>${when(p.due)}${p.due && new Date(p.due) < now && p.status !== 'concluida' ? html` <b class="txt-late">atrasada</b>` : ''}</td>
-          <td>${select('', ST, p.status, `data-id="${p.id}" data-k="status" aria-label="Estado"`)}</td></tr>`)}</tbody></table></div>` : empty('Nenhuma melhoria registrada.')}</section>
-    </div>`;
+          <td>${select('', ST, p.status, `data-id="${p.id}" data-k="status" aria-label="Estado"`)}</td></tr>`)}</tbody></table></div>` : empty('Nenhuma melhoria registrada.')}</section>`;
   },
   mount(el, _, ctx) {
     const db = store.get();

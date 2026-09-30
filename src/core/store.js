@@ -52,6 +52,12 @@ function migrate(d) {
   // Novas regulações padrão aparecem sem sobrescrever as editadas.
   for (const r of base.regulations) if (!out.regulations.some((x) => x.id === r.id)) out.regulations.push(r);
   for (const i of out.incidents) { i.attachments ||= []; i.tools ||= []; i.team ||= []; }
+  // Procedimentos padrão ganham o conteúdo novo sem perder edições da organização.
+  for (const def of DEFAULT_PROCEDURES) {
+    const cur = out.procedures.find((p) => p.id === def.id);
+    if (!cur) out.procedures.push(structuredClone(def));
+    else for (const k of ['objective', 'whenToUse', 'prerequisites', 'verification', 'cautions', 'records', 'color']) cur[k] ??= structuredClone(def[k]);
+  }
   return out;
 }
 

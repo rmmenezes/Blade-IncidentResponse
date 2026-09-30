@@ -19,35 +19,26 @@ Plataforma web de gestão completa de incidentes de cibersegurança baseada no *
 
 ## Funcionalidades
 
-- **Painel**: incidentes abertos por severidade, MTTD, MTTC, MTTR, alertas de SLA e de prazos regulatórios, próximas tarefas e índice de prontidão.
-- **Eventos adversos**: registro por fonte (SIEM, EDR, usuário, CTI…), triagem, correlação, descarte justificado e declaração de incidente.
-- **Incidentes** em lista ou quadro kanban, com filtros e exportação CSV.
-- **Gestão do incidente**:
-  - Fluxo de estados (Triagem → Análise → Contenção → Erradicação → Recuperação → Pós-incidente → Encerrado), com marcos de tempo automáticos e alertas de boas práticas antes de avançar.
-  - Priorização por impacto funcional, impacto na informação, recuperabilidade, escopo e criticidade dos ativos (S1–S4), com ajuste manual justificado.
-  - SLAs de triagem, contenção e recuperação por severidade.
-  - Papéis da equipe (líder, tratador, jurídico/DPO, comunicação, liderança, terceiros…).
-  - **Linha do tempo à prova de adulteração**: registros encadeados por SHA-256, com verificação de integridade (RS.AN-06).
-  - **Evidências com cadeia de custódia**: o hash SHA-256 do arquivo é calculado localmente (RS.AN-07).
-  - Indicadores (IOCs) com TLP, importação em lote com detecção de tipo e exportação em CSV e **STIX 2.1**.
-  - Tarefas por fase, com responsável e prazo, e **playbooks** (ransomware, phishing, BEC, vazamento de dados, DDoS, conta comprometida, malware, cadeia de suprimentos).
-  - Análise: hipótese, causa raiz, 5 porquês, táticas MITRE ATT&CK e magnitude (RS.AN-08).
-  - **Notificações regulatórias** com cálculo de prazo: LGPD/ANPD e titulares (3 dias úteis), GDPR (72 h), NIS2, SEC 8-K e CERT.br; também aceita regras personalizadas.
-  - Registro de comunicações e modelos de mensagem (atualização interna, ANPD, titulares, comunicado público).
-  - Recuperação: RS.MA-05, RC.RP-01 a RC.RP-06.
-  - Lições aprendidas com roteiro de perguntas, que geram melhorias.
-  - Checklist de conformidade com as subcategorias do CSF 2.0 aplicáveis ao incidente.
-  - **Relatório** completo pronto para imprimir ou salvar em PDF, e exportação em JSON.
-- **Pessoas**: seletor de usuário atual, equipe atribuída por incidente, papéis (líder, tratador, jurídico/DPO…), responsáveis por tarefas e passos, tela de **Atribuições** com carga de trabalho, tarefas sem responsável e "minhas tarefas".
-- **Processos e procedimentos**: catálogo de processos de resposta (dono, entradas/saídas, versão, revisão) e **POPs passo a passo** com papel e tecnologia por passo. Aplicar um POP cria uma tarefa obrigatória com checklist, atribuída automaticamente pelo papel. Cada passo registra quem concluiu e quando.
-- **Tecnologias**: catálogo (SIEM, EDR, backup, IAM, forense…) com responsável, estado, subcategorias CSF apoiadas, **matriz de cobertura por Função** e uso nos incidentes.
-- **Controle de fases**: tarefas obrigatórias; com o bloqueio ativo, o incidente só avança quando elas estiverem concluídas.
-- **Cronologia**: barra de duração entre marcos, lista de marcos, filtros por tipo de registro, exportação CSV e anexos dentro da linha do tempo.
-- **Arquivos e imagens**: anexe arquivos arrastando, selecionando ou colando imagens (Ctrl+V). Pré-visualização de imagens, PDF e texto, com o hash SHA-256 registrado na cadeia de integridade. Os arquivos ficam no navegador (IndexedDB), **sem servidor e sem Firebase**. Para compartilhar, use o **pacote do incidente** (`.blade.json` com os arquivos) e o botão *Importar pacote*.
-- **Relatórios**: executivo, operacional e SLAs, conformidade CSF, notificações regulatórias, indicadores (IOCs), equipe e carga, tecnologias e processos, lições e melhorias, e o relatório por incidente. Todos têm filtro de período, impressão em PDF e CSV.
-- **Preparação**: avaliação de prontidão (GV/ID/PR/DE/RS/RC), equipe e contatos, inventário de ativos e exercícios.
-- **Melhorias**: backlog ligado a incidentes e às subcategorias do CSF.
-- **Auditoria**, **busca global** (tecla `/`), tema claro/escuro, layout responsivo, backup e restauração por JSON.
+O menu tem 6 itens: **Início, Incidentes, Biblioteca, Relatórios, Organização e Configurações**.
+
+### Biblioteca (playbooks e procedimentos em formato de livro)
+- **10 playbooks completos**: ransomware, phishing, BEC, vazamento de dados pessoais, DDoS, conta comprometida, malware, incidente em fornecedor, ameaça interna e comprometimento em nuvem. Cada um tem capa, controle do documento, sumário, gatilhos de acionamento, papéis, pré-requisitos, fluxo de resposta, passos detalhados por fase (com papel responsável e subcategoria do CSF), evidências a coletar, pontos de decisão, comunicação, indicadores, técnicas MITRE ATT&CK, checklist, métricas e referências.
+- **Procedimentos operacionais (POPs)** com objetivo, quando usar, pré-requisitos, passo a passo, verificação, cuidados e registros. Podem ser criados, editados (a versão sobe automaticamente) e duplicados.
+- **Plano de Resposta a Incidentes** gerado com os dados da organização, e um **Guia NIST SP 800-61r3**.
+- **Download** de cada livro em PDF (pela impressão do navegador), HTML completo ou Markdown, e da **biblioteca inteira** em um único HTML.
+- **Usar em um incidente**: as etapas viram tarefas atribuídas pelo papel.
+
+### Incidentes
+- Fila de eventos adversos e declaração pelos critérios definidos (DE.AE-08).
+- 7 abas por incidente: Resumo, Plano de ação, Cronologia e arquivos, Análise, Evidências e IOCs, Comunicação e Encerramento.
+- Priorização S1–S4, SLAs, equipe e papéis, tarefas obrigatórias com passos (quem concluiu e quando) e controle de fases opcional.
+- Linha do tempo encadeada por SHA-256; arquivos e imagens anexados (arrastar, selecionar ou colar); evidências com cadeia de custódia; IOCs em CSV ou STIX 2.1.
+- Notificações regulatórias com prazo (LGPD/ANPD, GDPR, NIS2, SEC, CERT.br), modelos de mensagem, recuperação, lições aprendidas e checklist NIST.
+- Relatório do incidente pronto para imprimir e **pacote do incidente** (`.blade.json` com arquivos) para compartilhar.
+
+### Relatórios e organização
+- 9 relatórios com filtro de período, PDF e CSV.
+- Organização: equipe, ativos, tecnologias (cobertura por Função do CSF), processos, prontidão, exercícios e melhorias.
 
 ## Dados e privacidade
 
