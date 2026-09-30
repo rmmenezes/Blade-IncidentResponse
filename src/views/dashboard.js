@@ -30,7 +30,7 @@ export default {
       <section class="hero">
         <div class="hero-txt">
           <p class="eyebrow">${db.org.name}</p>
-          <h1>${hello}${me ? `, ${me.name.split(' ')[0]}` : ''}.</h1>
+          <h1>${hello}.</h1>
           <p class="muted">${open.length ? `${open.length} incidente(s) em andamento${critical ? `, ${critical} de alta severidade` : ''}.` : 'Nenhum incidente em andamento. Bom momento para revisar playbooks e treinar a equipe.'}</p>
           <div class="row">
             <a class="btn primary lg" href="#/incidentes/novo">${ic('alert')} Declarar incidente</a>
@@ -60,9 +60,9 @@ export default {
         </section>
         <div class="stack">
           <section class="card">
-            <div class="card-head"><h2>${me ? 'Minhas tarefas' : 'Próximas tarefas'}</h2><a href="#/atribuicoes">atribuições</a></div>
+            <div class="card-head"><h2>Próximas tarefas</h2><a href="#/atribuicoes">por área</a></div>
             ${tasks.length ? html`<ul class="task-mini">${tasks.map((t) => html`<li><a href="#/incidente/${t.inc.id}/tarefas">${t.title}</a>
-              <span class="muted small">${t.inc.id} · ${t.due ? when(t.due) : 'sem prazo'}${t.due && new Date(t.due) < now ? html` · <b class="txt-late">atrasada</b>` : ''}</span>
+              <span class="muted small">${t.inc.id} · ${db.contacts.find((c) => c.id === t.owner)?.name || 'sem área'}${t.due ? html` · ${when(t.due)}` : ''}${t.due && new Date(t.due) < now ? html` · <b class="txt-late">atrasada</b>` : ''}</span>
               ${t.steps?.length ? bar(Math.round((t.steps.filter((s) => s.done).length / t.steps.length) * 100)) : ''}</li>`)}</ul>`
               : html`<div class="empty-art">${raw(art('procedure', 'art-sm'))}<p>Nenhuma tarefa pendente.</p></div>`}
           </section>

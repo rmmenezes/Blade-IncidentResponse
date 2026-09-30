@@ -24,13 +24,13 @@ export default {
     const sel = load.find((l) => l.c.id === person);
     const opts = [{ v: '', t: '—' }, ...db.contacts.map((c) => ({ v: c.id, t: c.name }))];
     return html`<div class="page">
-      <div class="page-head"><div><h1>Atribuições</h1><p class="muted">Pessoas, papéis e tarefas nos incidentes em andamento (GV.RR-02).</p></div></div>
+      <div class="page-head"><div><h1>Atribuições</h1><p class="muted">Tarefas por área nos incidentes em andamento.</p></div></div>
       <div class="grid2">
         <section class="card">
           <h2>Carga de trabalho</h2>
-          ${load.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Pessoa</th><th>Incidentes</th><th>Tarefas abertas</th><th>Atrasadas</th></tr></thead>
+          ${load.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Área</th><th>Incidentes</th><th>Tarefas abertas</th><th>Atrasadas</th></tr></thead>
             <tbody>${load.map((l) => html`<tr class="${l.c.id === person ? 'sel' : ''}"><td><a href="#/atribuicoes?p=${l.c.id}"><span class="avatar">${initials(l.c.name)}</span> ${l.c.name}</a><br><small class="muted">${roleById[l.c.role]?.name || ''}${l.c.oncall ? ' · plantão' : ''}</small></td>
-              <td>${l.incs.length}</td><td style="min-width:140px">${bar((l.tasks.length / maxLoad) * 100)}<small>${l.tasks.length}</small></td><td>${l.late ? html`<b class="txt-late">${l.late}</b>` : 0}</td></tr>`)}</tbody></table></div>` : empty('Cadastre a equipe em Preparação → Equipe.')}
+              <td>${l.incs.length}</td><td style="min-width:140px">${bar((l.tasks.length / maxLoad) * 100)}<small>${l.tasks.length}</small></td><td>${l.late ? html`<b class="txt-late">${l.late}</b>` : 0}</td></tr>`)}</tbody></table></div>` : empty('Cadastre as áreas em Organização → Áreas.')}
         </section>
         <section class="card">
           <div class="card-head"><h2>Tarefas sem responsável</h2><span class="badge ${unassigned.length ? 'warn' : 'ok'}">${unassigned.length}</span></div>
@@ -39,12 +39,12 @@ export default {
         </section>
       </div>
       <section class="card">
-        <div class="card-head"><h2>${sel ? html`Tarefas de ${sel.c.name}${me?.id === sel.c.id ? ' (você)' : ''}` : 'Selecione uma pessoa'}</h2>${select('', opts, person, 'id="pick" aria-label="Pessoa"')}</div>
+        <div class="card-head"><h2>${sel ? html`Tarefas de ${sel.c.name}${me?.id === sel.c.id ? ' (você)' : ''}` : 'Selecione uma área'}</h2>${select('', opts, person, 'id="pick" aria-label="Área"')}</div>
         ${sel ? html`${sel.tasks.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Tarefa</th><th>Incidente</th><th>Fase</th><th>Progresso</th><th>Prazo</th></tr></thead>
           <tbody>${sel.tasks.sort((a, b) => new Date(a.due || '2999') - new Date(b.due || '2999')).map((t) => html`<tr><td><a href="#/incidente/${t.inc.id}/tarefas">${t.title}</a>${t.required ? html` <span class="badge warn">obrigatória</span>` : ''}</td>
             <td>${t.inc.id} ${sevBadge(t.inc.severity)}</td><td>${statusById[t.phase]?.name}</td><td style="min-width:110px">${bar(taskProgress(t))}</td>
             <td>${t.due ? html`${when(t.due)}${new Date(t.due) < now ? html` <b class="txt-late">atrasada</b>` : ''}` : '—'}</td></tr>`)}</tbody></table></div>` : empty('Nenhuma tarefa aberta.')}
-          <h3>Incidentes</h3>${sel.incs.length ? html`<ul class="list">${sel.incs.map((i) => html`<li><a href="#/incidente/${i.id}/equipe">${i.id} — ${i.title}</a><span class="muted">${Object.entries(i.roles).filter(([, v]) => v === sel.c.id).map(([r]) => roleById[r]?.name).join(', ') || 'membro'} · ${statusById[i.status].name}</span></li>`)}</ul>` : empty('Não participa de incidentes ativos.')}` : empty('Escolha uma pessoa ou defina seu usuário no topo da tela.')}
+          <h3>Incidentes</h3>${sel.incs.length ? html`<ul class="list">${sel.incs.map((i) => html`<li><a href="#/incidente/${i.id}/equipe">${i.id} — ${i.title}</a><span class="muted">${Object.entries(i.roles).filter(([, v]) => v === sel.c.id).map(([r]) => roleById[r]?.name).join(', ') || 'membro'} · ${statusById[i.status].name}</span></li>`)}</ul>` : empty('Não participa de incidentes ativos.')}` : empty('Escolha uma área.')}
       </section>
       <p class="small muted">Última atualização ${fmtDate(new Date().toISOString())}.</p>
     </div>`;

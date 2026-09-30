@@ -33,6 +33,7 @@ const LESSON_Q = [
   ['planUpdates', 'Que atualizações no plano de resposta, playbooks e políticas são necessárias (ID.IM-04)?'],
 ];
 
+const MAIN_LESSONS = ['wentWell', 'improve', 'prevent', 'planUpdates'];
 const contactOpts = (db) => [{ v: '', t: '—' }, ...db.contacts.map((c) => ({ v: c.id, t: c.name }))];
 const contactName = (db, id) => db.contacts.find((c) => c.id === id)?.name || '';
 
@@ -61,8 +62,8 @@ function tabVisao(inc, db) {
   const openTasks = inc.tasks.filter((t) => t.status !== 'concluida');
   const reqOpen = openTasks.filter((t) => t.required).length;
   return html`<div class="summary-strip">
-      <div><span>Líder</span><b>${lead || '—'}</b></div>
-      <div><span>Equipe</span><b>${teamIds(inc).length} pessoa(s)</b></div>
+      <div><span>Coordenação</span><b>${lead || '—'}</b></div>
+      <div><span>Áreas envolvidas</span><b>${teamIds(inc).length}</b></div>
       <div><span>Tarefas abertas</span><b>${openTasks.length}${reqOpen ? html` <small class="txt-late">(${reqOpen} obrigatórias)</small>` : ''}</b></div>
       <div><span>Declarado há</span><b>${fmtDuration(Date.now() - new Date(inc.declaredAt))}</b></div>
       <div><span>Arquivos</span><b>${inc.attachments.length}</b></div>
@@ -90,13 +91,12 @@ function tabVisao(inc, db) {
     </section>
     <div class="stack">
       <section class="card">
-        <h2>Priorização <small class="muted">RS.MA-03</small></h2>
-        <div class="form-grid">
+        <h2>Severidade <small class="muted">RS.MA-03</small></h2>
+        <div class="sevpick">${SEVERITIES.map((s) => html`<button class="sev-opt sev-${s.id} ${inc.severity === s.id ? 'on' : ''}" data-sev="${s.id}">${s.id}<small>${s.name}</small></button>`)}
+          <button class="sev-opt auto ${!inc.severityOverride ? 'on' : ''}" data-sev="" title="Calcular pelos fatores">Auto<small>${priorityScore(inc, db.assets)}/12</small></button></div>
+        <details class="more"><summary>Ajustar fatores de priorização</summary><div class="form-grid">
           ${Object.entries(FACTORS).map(([k, f]) => field(f.label, bs(k, inc, f.opts.map((t, v) => ({ v, t: `${v} — ${t}` })), 'data-num="1"')))}
-          ${field('Severidade manual', bs('severityOverride', inc, [{ v: '', t: 'Automática' }, ...SEVERITIES.map((s) => ({ v: s.id, t: `${s.id} · ${s.name}` }))]))}
-          ${field('Justificativa da alteração', b('overrideReason', inc))}
-        </div>
-        <p>Pontuação ${priorityScore(inc, db.assets)}/12 → ${sevBadge(inc.severity)}</p>
+        </div></details>
       </section>
       <section class="card">
         <h2>SLAs</h2>
@@ -109,38 +109,26 @@ function tabVisao(inc, db) {
   </div>`;
 }
 
-// Pessoas envolvidas: equipe explícita + papéis + responsáveis por tarefas.
+// Áreas envolvidas: incluídas manualmente, com papel ou com tarefas.
 export function teamIds(inc) {
   return [...new Set([...(inc.team || []), ...Object.values(inc.roles || {}).filter(Boolean), ...inc.tasks.map((t) => t.owner).filter(Boolean)])];
 }
 
 function tabEquipe(inc, db) {
   const ids = teamIds(inc);
-  const rolesOf = (id) => Object.entries(inc.roles).filter(([, v]) => v === id).map(([r]) => roleById[r]?.name || r);
-  const outside = db.contacts.filter((c) => !ids.includes(c.id));
-  return html`<div class="grid2">
-    <section class="card">
-      <div class="card-head"><h2>Equipe atribuída</h2>
-        <div class="row">${select('', [{ v: '', t: 'Adicionar pessoa…' }, ...outside.map((c) => ({ v: c.id, t: `${c.name} — ${roleById[c.role]?.name || ''}` }))], '', 'data-act="team-add" aria-label="Adicionar pessoa"')}</div></div>
-      ${ids.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Pessoa</th><th>Papéis no incidente</th><th>Tarefas</th><th>Contato</th><th></th></tr></thead>
-        <tbody>${ids.map((id) => { const c = db.contacts.find((x) => x.id === id); if (!c) return ''; const ts = inc.tasks.filter((t) => t.owner === id); const late = ts.filter((t) => t.status !== 'concluida' && t.due && new Date(t.due) < new Date()).length;
-          return html`<tr><td><span class="avatar">${initials(c.name)}</span> <b>${c.name}</b><br><small class="muted">${c.org}${c.external ? ' · externo' : ''}${c.oncall ? ' · plantão' : ''}</small></td>
-          <td>${rolesOf(id).join(', ') || html`<span class="muted">membro</span>`}</td>
-          <td>${ts.filter((t) => t.status === 'concluida').length}/${ts.length}${late ? html` <b class="txt-late">${late} atrasada(s)</b>` : ''}</td>
-          <td class="small">${c.email}<br>${c.phone}</td>
-          <td>${(inc.team || []).includes(id) ? html`<button class="icon-btn" data-team-del="${id}" aria-label="Remover da equipe">${ic('x')}</button>` : ''}</td></tr>`; })}</tbody></table></div>`
-        : empty('Nenhuma pessoa atribuída.')}
-      <p class="small muted">Cadastre pessoas em <a href="#/organizacao/equipe">Organização → Equipe</a>. Ao aplicar procedimentos, as tarefas são atribuídas automaticamente pelo papel.</p>
+  const rolesOf = (id) => Object.entries(inc.roles).filter(([, v]) => v === id).map(([r]) => roleById[r]?.name.replace(/\s*\(.*\)/, '') || r);
+  return html`<section class="card">
+      <div class="card-head"><h2>Áreas envolvidas</h2><a class="small" href="#/organizacao/equipe">gerenciar áreas</a></div>
+      <p class="small muted">Clique para incluir ou retirar uma área. As tarefas dos playbooks são atribuídas automaticamente pela área de cada papel.</p>
+      ${db.contacts.length ? html`<div class="area-chips">${db.contacts.map((c) => { const on = ids.includes(c.id); const roles = rolesOf(c.id); const ts = inc.tasks.filter((t) => t.owner === c.id && t.status !== 'concluida').length;
+        return html`<button class="area-chip ${on ? 'on' : ''}" data-area="${c.id}" ${roles.length && on ? 'title="Área com papel no incidente"' : ''}>${ic(c.external ? 'ext' : 'users')}<span><b>${c.name}</b><small>${roles.join(' · ') || (on ? 'apoio' : 'não envolvida')}${ts ? ` · ${ts} tarefa(s)` : ''}</small></span></button>`; })}</div>`
+        : empty('Nenhuma área cadastrada.', html`<a class="btn sm" href="#/organizacao/equipe">Cadastrar áreas</a>`)}
+      <details class="more"><summary>Ajustar área por papel</summary>
+        <div class="form-grid">${ROLES.filter((r) => CORE_ROLES.includes(r.id)).map((r) => field(r.name, bs(`roles.${r.id}`, inc, contactOpts(db))))}</div></details>
     </section>
-    <section class="card">
-      <h2>Papéis e responsabilidades <small class="muted">GV.RR-02</small></h2>
-      <div class="form-grid">${ROLES.filter((r) => CORE_ROLES.includes(r.id)).map((r) => field(r.name, bs(`roles.${r.id}`, inc, contactOpts(db))))}</div>
-      <details class="more"><summary>Outros papéis</summary><div class="form-grid">${ROLES.filter((r) => !CORE_ROLES.includes(r.id)).map((r) => field(r.name, bs(`roles.${r.id}`, inc, contactOpts(db))))}</div></details>
-    </section>
-  </div>
   <p class="right small"><button class="btn ghost sm danger-link" data-act="delete">${ic('trash')} Excluir incidente</button></p>`;
 }
-const CORE_ROLES = ['lead', 'handler', 'tech', 'legal', 'comms'];
+const CORE_ROLES = ['lead', 'handler', 'tech', 'legal', 'comms', 'leadership'];
 export const initials = (n = '') => n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
 function tabLinha(inc) {
@@ -180,8 +168,7 @@ function tabTarefas(inc, db) {
       <div class="row">${select('pb', [{ v: '', t: 'Aplicar playbook…' }, ...PLAYBOOKS.map((p) => ({ v: p.id, t: p.name }))], '', 'data-act="apply-pb" aria-label="Aplicar playbook"')}
       ${select('pop', [{ v: '', t: 'Aplicar procedimento…' }, ...db.procedures.map((p) => ({ v: p.id, t: `${p.name} (v${p.version})` }))], '', 'data-act="apply-pop" aria-label="Aplicar procedimento"')}
       <button class="btn sm primary" data-act="task-add">${ic('plus')} Nova tarefa</button></div></div>
-    <p class="small muted">${db.org.enforceGates ? html`${ic('lock')} Controle de fases ativo: tarefas <b>obrigatórias</b> precisam estar concluídas para avançar o estado.` : html`Tarefas <b>obrigatórias</b> geram alertas ao avançar de fase. Ative o bloqueio em <a href="#/config">Configurações</a>.`}
-      ${blockers.length ? html` · <b class="txt-late">${blockers.length} obrigatória(s) pendente(s)</b>` : ''}</p>
+    ${blockers.length ? html`<p class="small"><b class="txt-late">${blockers.length} tarefa(s) obrigatória(s) pendente(s)</b></p>` : ''}
     ${inc.playbooks.length ? html`<div class="applied">${inc.playbooks.map((id2) => playbookById[id2]).filter(Boolean).map((p) => html`<a class="applied-bk" href="#/livro/pb-${p.id}" style="--bk:${p.color}"><span class="mini-cover">${raw(art(p.art))}</span><span><small class="muted">Playbook aplicado</small><b>${p.name}</b><small>Abrir o livro →</small></span></a>`)}</div>` : html`<a class="applied-bk ghost" href="#/biblioteca"><span class="mini-cover">${raw(art('guide'))}</span><span><small class="muted">Nenhum playbook aplicado</small><b>Escolher na biblioteca</b><small>ou use o seletor acima</small></span></a>`}
     ${phases.map((ph) => {
       const ts = inc.tasks.filter((t) => t.phase === ph.id);
@@ -195,11 +182,8 @@ function tabTarefas(inc, db) {
             <div class="row small">${t.required ? html`<span class="badge warn">obrigatória</span>` : ''}${t.procedure ? html`<span class="badge ghost">POP</span>` : ''}${t.csf ? fnBadge(t.csf) : ''}
               ${late ? html`<b class="txt-late">atrasada</b>` : ''}${t.doneBy ? html`<span class="muted">concluída por ${t.doneBy} em ${fmtDate(t.doneAt)}</span>` : ''}</div>
             ${t.steps?.length ? html`<div class="row small">${bar(p)}<span class="muted">${t.steps.filter((s) => s.done).length}/${t.steps.length} passos</span></div>` : ''}</div>
-          <div class="task-meta">${taskOwnerSel(db, t)}${dt('', t.due, `data-task="${t.id}" data-k="due" aria-label="Prazo"`)}
-            ${select('', Object.entries(TASK_ST).map(([v, t2]) => ({ v, t: t2 })), t.status, `data-task="${t.id}" data-k="status" aria-label="Estado"`)}
-            <button class="icon-btn" data-task-req="${t.id}" title="${t.required ? 'Tornar opcional' : 'Tornar obrigatória'}" aria-label="Obrigatória">${ic('lock')}</button>
-            <button class="icon-btn" data-task-step="${t.id}" title="Adicionar passo" aria-label="Adicionar passo">${ic('plus')}</button>
-            <button class="icon-btn" data-task-del="${t.id}" aria-label="Remover">${ic('x')}</button></div>
+          <div class="task-meta">${t.due ? html`<span class="small ${late ? 'txt-late' : 'muted'}">${ic('clock')} ${fmtDate(t.due)}</span>` : ''}${taskOwnerSel(db, t)}
+            <button class="icon-btn" data-task-del="${t.id}" aria-label="Remover" title="Remover">${ic('x')}</button></div>
         </div>
         ${t.steps?.length ? html`<ol class="steplist">${t.steps.map((s) => html`<li class="${s.done ? 'done' : ''}"><label class="chk"><input type="checkbox" data-step="${t.id}:${s.id}" ${s.done ? 'checked' : ''}>
           <span>${s.text}${s.role ? html` <small class="muted">· ${roleById[s.role]?.name || s.role}</small>` : ''}${s.tech ? html` <small class="muted">· ${db.technologies.find((x) => x.id === s.tech)?.name || ''}</small>` : ''}
@@ -234,11 +218,11 @@ function tabAnalise(inc, db) {
       <h2>Análise e causa raiz (RS.AN-03)</h2>
       ${field('Hipótese de trabalho', bt('analysis.hypothesis', inc))}
       ${field('Causa raiz', bt('analysis.rootCause', inc))}
-      <h3>5 porquês</h3>
-      ${[0, 1, 2, 3, 4].map((i) => field(`Por quê ${i + 1}?`, b(`analysis.whys.${i}`, inc)))}
       <h3>Táticas MITRE ATT&CK observadas</h3>
       <div class="chips">${MITRE_TACTICS.map((t) => html`<label class="chip"><input type="checkbox" data-tactic="${t}" ${a.tactics?.includes(t) ? 'checked' : ''}> ${t}</label>`)}</div>
-      ${field('Técnicas (IDs, ex.: T1078, T1486)', b('analysis.techniques', inc))}
+      <details class="more"><summary>5 porquês e técnicas</summary>
+        ${[0, 1, 2, 3, 4].map((i) => field(`Por quê ${i + 1}?`, b(`analysis.whys.${i}`, inc)))}
+        ${field('Técnicas (IDs, ex.: T1078, T1486)', b('analysis.techniques', inc))}</details>
     </section>
     <section class="card">
       <div class="card-head"><h2>Tecnologias utilizadas na resposta</h2><a class="small" href="#/organizacao/tecnologias">catálogo</a></div>
@@ -250,12 +234,13 @@ function tabAnalise(inc, db) {
         <div class="form-grid">
           ${field('Registros afetados', b('magnitude.records', inc, 'type="number" min="0"'))}
           ${field('Usuários / titulares afetados', b('magnitude.users', inc, 'type="number" min="0"'))}
-          ${field('Sistemas afetados', b('magnitude.systems', inc, 'type="number" min="0"'))}
-          ${field('Impacto financeiro estimado (R$)', b('magnitude.financial', inc, 'type="number" min="0"'))}
           <div class="span2">${field('Tipos de dados afetados', b('magnitude.dataTypes', inc))}</div>
-          <div class="span2">${field('Premissas e validação da estimativa', bt('magnitude.notes', inc))}</div>
           <div class="span2">${bc('personalData', inc, 'Envolve dados pessoais')}</div>
         </div>
+        <details class="more"><summary>Mais detalhes da magnitude</summary><div class="form-grid">
+          ${field('Sistemas afetados', b('magnitude.systems', inc, 'type="number" min="0"'))}
+          ${field('Impacto financeiro estimado (R$)', b('magnitude.financial', inc, 'type="number" min="0"'))}
+          <div class="span2">${field('Premissas e validação da estimativa', bt('magnitude.notes', inc))}</div></div></details>
       </section>
       <section class="card">
         <div class="card-head"><h2>Ativos afetados</h2><a class="small" href="#/organizacao/ativos">inventário</a></div>
@@ -301,11 +286,10 @@ function tabComunicacao(inc, db) {
   return html`<div class="stack">
     <section class="card">
       <h2>Notificações obrigatórias (RS.CO-02)</h2>
-      <div class="form-grid">
-        ${field('Ciência do incidente (início da contagem)', bd('awareAt', inc))}
-        ${field('Materialidade determinada em', bd('materialAt', inc))}
-        <div class="span2">${bc('personalData', inc, 'Envolve dados pessoais')}</div>
-      </div>
+      <div class="row">${bc('personalData', inc, 'Envolve dados pessoais')}</div>
+      <details class="more"><summary>Datas de início da contagem</summary><div class="form-grid">
+        ${field('Ciência do incidente', bd('awareAt', inc))}
+        ${field('Materialidade determinada em', bd('materialAt', inc))}</div></details>
       ${ns.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Obrigação</th><th>Destinatário</th><th>Prazo</th><th>Estado</th><th></th></tr></thead>
         <tbody>${ns.map((n) => html`<tr class="ns-${n.state.replace(/\s/g, '-')}"><td><b>${n.reg.name}</b><br><small class="muted">${n.reg.note}</small></td><td>${n.reg.authority}</td>
           <td>${when(n.due)}</td><td><span class="badge ns">${n.state}</span>${n.rec.sentAt ? html`<br><small>${fmtDate(n.rec.sentAt)} ${n.rec.ref ? '· ' + n.rec.ref : ''}</small>` : ''}${n.rec.waived ? html`<br><small>${n.rec.reason}</small>` : ''}</td>
@@ -324,24 +308,20 @@ function tabComunicacao(inc, db) {
 }
 
 function tabRecuperacao(inc) {
-  return html`<div class="grid2">
-    <section class="card">
-      <h2>Início da recuperação</h2>
-      ${field('Critérios para iniciar a recuperação (RS.MA-05)', bt('recovery.criteria', inc))}
-      ${csfCheck(inc, 'RS.MA-05')}
-      ${field('Plano e prioridades de restauração (RC.RP-01, RC.RP-02)', bt('recovery.plan', inc, 'rows="4"'))}
-      ${bc('recovery.backupVerified', inc, 'Integridade dos backups e ativos de restauração verificada antes do uso (RC.RP-03)')}
-      ${field('Como a integridade dos backups foi verificada', bt('recovery.backupHow', inc, 'rows="2"'))}
-    </section>
-    <section class="card">
-      <h2>Retorno à operação</h2>
-      ${field('Normas operacionais pós-incidente — funções críticas e riscos considerados (RC.RP-04)', bt('recovery.norms', inc))}
-      ${bc('recovery.restoredVerified', inc, 'Integridade dos ativos restaurados verificada e operação normal confirmada (RC.RP-05)')}
-      ${field('Monitoramento reforçado após a restauração', bt('recovery.monitoring', inc, 'rows="2"'))}
-      ${field('Critérios de fim da recuperação (RC.RP-06)', bt('recovery.endCriteria', inc))}
-      ${csfCheck(inc, 'RC.RP-06')}
-    </section>
-  </div>`;
+  return html`<section class="card">
+      <h2>Recuperação</h2>
+      <div class="grid2">
+        <div>${field('Critérios para iniciar a recuperação (RS.MA-05)', bt('recovery.criteria', inc, 'rows="2"'))}
+          ${bc('recovery.backupVerified', inc, 'Backups verificados antes de restaurar (RC.RP-03)')}</div>
+        <div>${field('Critérios de fim da recuperação (RC.RP-06)', bt('recovery.endCriteria', inc, 'rows="2"'))}
+          ${bc('recovery.restoredVerified', inc, 'Sistemas restaurados verificados e operação normal confirmada (RC.RP-05)')}</div>
+      </div>
+      <details class="more"><summary>Plano, verificação e monitoramento</summary><div class="form-grid">
+        ${field('Plano e prioridades de restauração', bt('recovery.plan', inc, 'rows="3"'))}
+        ${field('Como os backups foram verificados', bt('recovery.backupHow', inc, 'rows="3"'))}
+        ${field('Normas operacionais pós-incidente (RC.RP-04)', bt('recovery.norms', inc, 'rows="3"'))}
+        ${field('Monitoramento reforçado', bt('recovery.monitoring', inc, 'rows="3"'))}</div></details>
+    </section>`;
 }
 
 function tabLicoes(inc, db) {
@@ -349,11 +329,11 @@ function tabLicoes(inc, db) {
   return html`<div class="grid2">
     <section class="card">
       <h2>Revisão pós-incidente (ID.IM-01, ID.IM-03)</h2>
-      <div class="form-grid">
-        ${field('Reunião realizada em', bd('lessons.meetingAt', inc))}
-        ${field('Participantes', b('lessons.participants', inc))}
-      </div>
-      ${LESSON_Q.map(([k, q]) => field(q, bt(`lessons.${k}`, inc, 'rows="2"')))}
+      ${field('Reunião realizada em', bd('lessons.meetingAt', inc))}
+      ${LESSON_Q.filter(([k]) => MAIN_LESSONS.includes(k)).map(([k, q]) => field(q, bt(`lessons.${k}`, inc, 'rows="2"')))}
+      <details class="more"><summary>Mais perguntas da revisão</summary>
+        ${field('Áreas participantes', b('lessons.participants', inc))}
+        ${LESSON_Q.filter(([k]) => !MAIN_LESSONS.includes(k)).map(([k, q]) => field(q, bt(`lessons.${k}`, inc, 'rows="2"')))}</details>
     </section>
     <section class="card">
       <div class="card-head"><h2>Melhorias geradas</h2><button class="btn sm primary" data-act="imp-add">${ic('plus')} Registrar melhoria</button></div>
@@ -419,7 +399,11 @@ export default {
         <div class="row"><a class="btn" href="#/incidente/${inc.id}/relatorio">${ic('print')} Relatório</a><button class="btn" data-act="pkg" title="JSON com o incidente e seus arquivos">${ic('down')} Pacote</button></div>
       </div>
       <ol class="stepper">${STATUSES.map((s, i) => html`<li class="${i < cur ? 'past' : i === cur ? 'cur' : ''}"><button data-status="${s.id}" title="${s.hint}" ${i === cur ? 'aria-current="step"' : ''}><span>${i + 1}</span>${s.name}</button></li>`)}</ol>
-      <p class="hint-line">${ic('info')} ${statusById[inc.status].hint}</p>
+      <div class="phase-nav">
+        ${cur > 0 ? html`<button class="btn" data-status="${STATUSES[cur - 1].id}">← Voltar para ${STATUSES[cur - 1].name}</button>` : html`<span></span>`}
+        <p class="hint-line">${ic('info')} ${statusById[inc.status].hint}</p>
+        ${cur < STATUSES.length - 1 ? html`<button class="btn primary" data-status="${STATUSES[cur + 1].id}">Avançar para ${STATUSES[cur + 1].name} →</button>` : html`<span></span>`}
+      </div>
       <nav class="tabs inc-tabs" aria-label="Seções do incidente">${TABS.map(([k, t, icon]) => { const n = k === 'tarefas' ? inc.tasks.filter((x) => x.status !== 'concluida').length : k === 'linha' ? inc.attachments.length : k === 'evidencias' ? inc.evidence.length + inc.iocs.length : 0;
         return html`<a class="tab ${k === tab ? 'on' : ''}" href="#/incidente/${inc.id}/${k}">${ic(icon)} ${t}${n ? html` <em>${n}</em>` : ''}</a>`; })}</nav>
       ${RENDER[tab](inc, db)}
@@ -489,7 +473,7 @@ export default {
       }
       if (t.dataset.act === 'team-add' && t.value) {
         inc.team = [...new Set([...(inc.team || []), t.value])];
-        return save(`Pessoa atribuída ao incidente: ${contactName(db, t.value)}`);
+        return save(`Área incluída no incidente: ${contactName(db, t.value)}`);
       }
       if (t.dataset.act === 'apply-pop' && t.value) {
         const pop = db.procedures.find((x) => x.id === t.value);
@@ -513,29 +497,29 @@ export default {
       const d = t.dataset;
 
       if (d.status) {
+        // Troca de fase direta, sem justificativa; pendências aparecem só como aviso.
         const to = d.status;
         if (to === inc.status) return;
-        const blockers = statusIndex(to) > statusIndex(inc.status) ? phaseBlockers(inc, to) : [];
-        if (blockers.length && db.org.enforceGates) {
-          modal('Avanço bloqueado', html`<div class="warnbox"><b>Conclua as tarefas obrigatórias antes de avançar para "${statusById[to].name}":</b>
-            <ul>${blockers.map((k) => html`<li>${statusById[k.phase].name}: ${k.title}${k.owner ? ` — ${contactName(db, k.owner)}` : ''}</li>`)}</ul></div>
-            <p class="small muted">O controle de fases pode ser alterado em Configurações.</p>`);
-          return;
-        }
-        const warns = [...blockers.map((k) => `Tarefa obrigatória pendente: ${k.title}`), ...transitionWarnings(inc, to)];
-        modal(`Mover para "${statusById[to].name}"`, html`
-          ${warns.length ? html`<div class="warnbox"><b>Atenção (boas práticas da Rev. 3):</b><ul>${warns.map((w) => html`<li>${w}</li>`)}</ul><p class="small">Você pode prosseguir mesmo assim.</p></div>` : ''}
-          ${field('Justificativa / observação (vai para a linha do tempo)', textarea('note', '', 'rows="2"'))}`, {
-          submitLabel: 'Confirmar',
-          onSubmit: async (f) => {
-            await store.setStatus(inc, to, f.note);
-            const now = new Date().toISOString();
-            if (inc.containedAt && !inc.csf['RS.MI-01']?.done) inc.csf['RS.MI-01'] = { done: true, at: now, note: 'Registrado na mudança de estado' };
-            if (inc.eradicatedAt && !inc.csf['RS.MI-02']?.done) inc.csf['RS.MI-02'] = { done: true, at: now, note: 'Registrado na mudança de estado' };
-            if (inc.triagedAt && !inc.csf['RS.MA-02']?.done) inc.csf['RS.MA-02'] = { done: true, at: now, note: 'Registrado na mudança de estado' };
-            store.persist(); ctx.rerender();
-          },
-        });
+        const forward = statusIndex(to) > statusIndex(inc.status);
+        const warns = forward ? [...phaseBlockers(inc, to), ...transitionWarnings(inc, to)] : [];
+        await store.setStatus(inc, to);
+        const now = new Date().toISOString();
+        if (inc.containedAt && !inc.csf['RS.MI-01']?.done) inc.csf['RS.MI-01'] = { done: true, at: now, note: 'Registrado na mudança de fase' };
+        if (inc.eradicatedAt && !inc.csf['RS.MI-02']?.done) inc.csf['RS.MI-02'] = { done: true, at: now, note: 'Registrado na mudança de fase' };
+        if (inc.triagedAt && !inc.csf['RS.MA-02']?.done) inc.csf['RS.MA-02'] = { done: true, at: now, note: 'Registrado na mudança de fase' };
+        store.persist(); ctx.rerender();
+        toast(`Fase: ${statusById[to].name}${warns.length ? ` · ${warns.length} pendência(s) para revisar` : ''}`, warns.length ? 'warn' : 'ok');
+        return;
+      }
+      if (d.sev !== undefined) {
+        const before = inc.severity; inc.severityOverride = d.sev; store.recompute(inc);
+        return save(inc.severity !== before ? `Severidade: ${before} → ${inc.severity}` : null);
+      }
+      if (d.area) {
+        const on = teamIds(inc).includes(d.area);
+        inc.team = on ? (inc.team || []).filter((x) => x !== d.area) : [...new Set([...(inc.team || []), d.area])];
+        if (on) for (const [r, v] of Object.entries(inc.roles)) if (v === d.area) delete inc.roles[r];
+        return save(`${on ? 'Área retirada' : 'Área incluída'}: ${contactName(db, d.area)}`);
       }
 
       if (d.act === 'pkg') {
@@ -548,8 +532,6 @@ export default {
         el.querySelectorAll('[data-tlf]').forEach((x) => x.classList.toggle('on', x === t));
         el.querySelectorAll('.timeline li').forEach((li) => { li.hidden = d.tlf && li.dataset.type !== d.tlf; });
       }
-      if (d.teamDel) { inc.team = inc.team.filter((x) => x !== d.teamDel); return save(`Pessoa removida da equipe: ${contactName(db, d.teamDel)}`); }
-      if (d.taskReq) { const k = inc.tasks.find((x) => x.id === d.taskReq); k.required = !k.required; return save(`Tarefa "${k.title}" marcada como ${k.required ? 'obrigatória' : 'opcional'}`); }
       if (d.taskStep) {
         const k = inc.tasks.find((x) => x.id === d.taskStep);
         modal(`Adicionar passo — ${k.title}`, html`${field('Passo', input('text', '', 'required'))}${field('Papel', select('role', [{ v: '', t: '—' }, ...ROLES.map((r) => ({ v: r.id, t: r.name }))], ''))}`, {
@@ -577,10 +559,10 @@ export default {
       }
       if (d.act === 'tl-add') {
         modal('Registrar na linha do tempo', html`<div class="form-grid">
-          ${field('Quando ocorreu', dt('at', new Date().toISOString(), 'required'))}
+          <div class="span2">${field('O que aconteceu?', textarea('text', '', 'required rows="3"'))}</div>
           ${field('Tipo', select('type', Object.entries(TL_TYPES).filter(([k]) => !['status', 'sistema'].includes(k)).map(([v, t2]) => ({ v, t: t2 })), 'acao'))}
-          <div class="span2">${field('Descrição', textarea('text', '', 'required rows="3"'))}</div>
-          <div class="span2">${field('Anexar arquivos / imagens (opcional)', raw('<input type="file" name="_files" multiple>'), 'O hash de cada arquivo passa a integrar o registro encadeado.')}</div></div>`, {
+          ${field('Arquivos (opcional)', raw('<input type="file" name="_files" multiple>'))}
+          <details class="more span2"><summary>Aconteceu em outro horário?</summary>${field('Quando ocorreu', dt('at', new Date().toISOString(), 'required'))}</details></div>`, {
           onSubmit: async (f, form) => {
             const metas = await storeFiles([...form.querySelector('[name=_files]').files], 'timeline');
             await store.addTimeline(inc, { ...f, files: metas.map((m) => m.sha256), fileIds: metas.map((m) => m.id) });
@@ -592,11 +574,12 @@ export default {
       if (d.act === 'task-add') {
         modal('Nova tarefa', html`<div class="form-grid">
           <div class="span2">${field('Tarefa', input('title', '', 'required'))}</div>
-          ${field('Fase', select('phase', STATUSES.filter((s) => s.id !== 'encerrado').map((s) => ({ v: s.id, t: s.name })), inc.status === 'encerrado' ? 'pos' : inc.status))}
-          ${field('Subcategoria CSF', select('csf', [{ v: '', t: '—' }, ...SUBCATEGORIES.map((s) => ({ v: s.id, t: `${s.id} — ${s.text.slice(0, 60)}…` }))], ''))}
-          ${field('Responsável', select('owner', contactOpts(db), ''))}
-          ${field('Prazo', dt('due', null))}
-          <label class="chk span2"><input type="checkbox" name="required"> Obrigatória para avançar de fase</label></div>`, {
+          ${field('Área responsável', select('owner', contactOpts(db), inc.roles.handler || inc.roles.lead || ''))}
+          ${field('Prazo (opcional)', dt('due', null))}
+          <details class="more span2"><summary>Mais opções</summary><div class="form-grid">
+            ${field('Fase', select('phase', STATUSES.filter((s) => s.id !== 'encerrado').map((s) => ({ v: s.id, t: s.name })), inc.status === 'encerrado' ? 'pos' : inc.status))}
+            ${field('Subcategoria CSF', select('csf', [{ v: '', t: '—' }, ...SUBCATEGORIES.map((s) => ({ v: s.id, t: `${s.id} — ${s.text.slice(0, 60)}…` }))], ''))}
+            <label class="chk span2"><input type="checkbox" name="required"> Obrigatória</label></div></details></div>`, {
           onSubmit: (f) => { inc.tasks.push({ id: uid('k'), status: 'aberta', ...f }); return save(`Tarefa criada: ${f.title}${f.owner ? ' → ' + contactName(db, f.owner) : ''}`); },
         });
       }
@@ -604,15 +587,16 @@ export default {
 
       if (d.act === 'ev-add') {
         const dlg = modal('Nova evidência', html`<div class="form-grid">
-          <div class="span2">${field('Arquivo (opcional — calcula SHA-256 localmente)', raw('<input type="file" id="evfile">'))}</div>
+          <div class="span2">${field('Arquivo (o hash SHA-256 é calculado sozinho)', raw('<input type="file" id="evfile">'))}</div>
           ${field('Nome / descrição', input('name', '', 'required'))}
           ${field('Tipo', select('type', ['Imagem de disco', 'Memória', 'Log', 'Captura de rede (PCAP)', 'E-mail', 'Arquivo / amostra', 'Captura de tela', 'Documento', 'Outro'], 'Log'))}
-          ${field('Algoritmo', select('hashAlg', ['SHA-256', 'SHA-1', 'MD5'], 'SHA-256'))}
-          ${field('Hash', input('hash', ''))}
-          ${field('Coletado por', input('collectedBy', store.userName(), 'required'))}
-          ${field('Coletado em', dt('collectedAt', new Date().toISOString()))}
-          <div class="span2">${field('Local de armazenamento', input('location', ''))}</div>
-          <label class="chk span2"><input type="checkbox" name="keep" checked> Guardar cópia do arquivo na plataforma (aba Arquivos)</label>
+          <details class="more span2"><summary>Hash, coleta e armazenamento</summary><div class="form-grid">
+            ${field('Algoritmo', select('hashAlg', ['SHA-256', 'SHA-1', 'MD5'], 'SHA-256'))}
+            ${field('Hash', input('hash', ''))}
+            ${field('Coletado por', input('collectedBy', store.userName(), 'required'))}
+            ${field('Coletado em', dt('collectedAt', new Date().toISOString()))}
+            <div class="span2">${field('Local de armazenamento', input('location', ''))}</div>
+            <label class="chk span2"><input type="checkbox" name="keep" checked> Guardar cópia do arquivo na plataforma</label></div></details>
           <input type="hidden" name="size" data-type="number"></div>`, {
           onSubmit: async (f, form) => {
             const file = form.querySelector('#evfile').files[0];
@@ -667,8 +651,8 @@ export default {
       if (d.notifSend) {
         const reg = db.regulations.find((r) => r.id === d.notifSend);
         modal(`Registrar envio — ${reg.name}`, html`<div class="form-grid">
-          ${field('Enviado em', dt('sentAt', new Date().toISOString(), 'required'))}${field('Protocolo / referência', input('ref', ''))}
-          <div class="span2">${field('Observações', textarea('notes', '', 'rows="2"'))}</div></div>`, {
+          <div class="span2">${field('Protocolo / referência (opcional)', input('ref', ''))}</div>
+          <details class="more span2"><summary>Enviado em outro horário?</summary>${field('Enviado em', dt('sentAt', new Date().toISOString(), 'required'))}</details></div>`, {
           onSubmit: (f) => {
             inc.notifications = inc.notifications.filter((n) => n.regId !== reg.id).concat({ regId: reg.id, ...f });
             inc.comms.push({ id: uid('m'), at: f.sentAt, audience: 'regulador', stakeholder: reg.authority, channel: 'Notificação formal', summary: `${reg.name}${f.ref ? ' · ' + f.ref : ''}`, csf: 'RS.CO-02' });
@@ -687,10 +671,11 @@ export default {
 
       if (d.act === 'comm-add') {
         modal('Registrar comunicação', html`<div class="form-grid">
-          ${field('Data', dt('at', new Date().toISOString()))}${field('Público', select('audience', Object.entries(AUDIENCES).map(([v, t2]) => ({ v, t: t2 })), 'interno'))}
-          ${field('Destinatário', input('stakeholder', '', 'required'))}${field('Canal', input('channel', 'E-mail'))}
-          ${field('Subcategoria', select('csf', COMM_CSF.map((c) => ({ v: c, t: `${c} — ${subById[c].text.slice(0, 50)}…` })), inc.status === 'recuperacao' ? 'RC.CO-03' : 'RS.CO-02'))}
-          <div class="span2">${field('Resumo', textarea('summary', '', 'required rows="3"'))}</div></div>`, {
+          ${field('Público', select('audience', Object.entries(AUDIENCES).map(([v, t2]) => ({ v, t: t2 })), 'interno'))}${field('Destinatário', input('stakeholder', '', 'required'))}
+          <div class="span2">${field('Resumo', textarea('summary', '', 'required rows="3"'))}</div>
+          <details class="more span2"><summary>Data, canal e subcategoria</summary><div class="form-grid">
+            ${field('Data', dt('at', new Date().toISOString()))}${field('Canal', input('channel', 'E-mail'))}
+            ${field('Subcategoria', select('csf', COMM_CSF.map((c) => ({ v: c, t: `${c} — ${subById[c].text.slice(0, 50)}…` })), inc.status === 'recuperacao' ? 'RC.CO-03' : 'RS.CO-02'))}</div></details></div>`, {
           onSubmit: (f) => { inc.comms.push({ id: uid('m'), ...f }); return save(`Comunicação (${AUDIENCES[f.audience]}) para ${f.stakeholder}: ${f.summary}`); },
         });
       }
@@ -709,9 +694,10 @@ export default {
       if (d.act === 'imp-add') {
         modal('Registrar melhoria', html`<div class="form-grid">
           <div class="span2">${field('Melhoria', input('title', '', 'required'))}</div>
-          ${field('Subcategoria CSF alvo', input('csf', 'ID.IM-04', 'placeholder="ex.: PR.AA-03"'))}
+          ${field('Área responsável', select('owner', contactOpts(db), ''))}
           ${field('Prioridade', select('priority', [{ v: 'alta', t: 'Alta' }, { v: 'media', t: 'Média' }, { v: 'baixa', t: 'Baixa' }], 'media'))}
-          ${field('Responsável', select('owner', contactOpts(db), ''))}${field('Prazo', dt('due', null))}</div>`, {
+          <details class="more span2"><summary>Prazo e subcategoria</summary><div class="form-grid">
+            ${field('Prazo', dt('due', null))}${field('Subcategoria CSF alvo', input('csf', 'ID.IM-04', 'placeholder="ex.: PR.AA-03"'))}</div></details></div>`, {
           onSubmit: (f) => {
             db.improvements.unshift({ id: uid('p'), status: 'aberta', source: inc.id, ...f });
             inc.csf['ID.IM-03'] = inc.csf['ID.IM-03']?.done ? inc.csf['ID.IM-03'] : { done: true, at: new Date().toISOString(), note: 'Melhoria registrada' };

@@ -16,7 +16,7 @@ export default {
       <div class="hero-txt">
         <p class="eyebrow">NIST SP 800-61 Rev. 3 · CSF 2.0</p>
         <h1>Resposta a incidentes, do alerta à lição aprendida.</h1>
-        <p class="lead">A Blade organiza pessoas, playbooks e evidências para sua equipe responder com método, sem planilhas nem improviso.</p>
+        <p class="lead">A Blade organiza áreas, playbooks e evidências para sua equipe responder com método, sem planilhas nem improviso.</p>
         <div class="row">
           <button class="btn primary lg" data-start="demo">${ic('dash')} Explorar com dados de exemplo</button>
           <button class="btn lg" data-start="empty">${ic('plus')} Começar do zero</button>

@@ -2,22 +2,26 @@
 import * as store from '../core/store.js';
 import { html } from '../core/util.js';
 import { CATEGORIES_INCIDENT } from '../core/nist.js';
-import { sectionTabs } from './incidents.js';
+import { sectionTabs, playbookTasks } from './incidents.js';
+import { PLAYBOOKS } from '../data/playbooks.js';
 import { ic, field, input, dt, textarea, select, modal, toast, when, empty, confirmBox } from '../ui.js';
 
 const SOURCES = ['SIEM', 'EDR/XDR', 'IDS/IPS', 'Firewall', 'Gateway de e-mail', 'CSPM/Nuvem', 'DLP', 'Relato de usuário', 'Terceiro / fornecedor', 'CTI / ISAC', 'CERT / autoridade', 'Varredura de vulnerabilidades', 'Outro'];
 const EV_STATUS = { novo: 'Novo', analise: 'Em análise', descartado: 'Descartado (benigno / falso positivo)', declarado: 'Incidente declarado' };
 const SEV_HINT = ['baixa', 'media', 'alta', 'critica'];
 
+// Só o essencial; o restante fica recolhido.
 function eventForm(e = {}, db) {
   return html`<div class="form-grid">
-    ${field('Título', input('title', e.title, 'required'))}
+    <div class="span2">${field('O que foi observado?', input('title', e.title, 'required'))}</div>
     ${field('Fonte', select('source', SOURCES, e.source || 'SIEM'))}
-    ${field('Observado em', dt('observedAt', e.observedAt || new Date().toISOString(), 'required'))}
-    ${field('Relatado por', input('reporter', e.reporter))}
-    ${field('Ativo relacionado', select('asset', [{ v: '', t: '—' }, ...db.assets.map((a) => ({ v: a.id, t: a.name }))], e.asset))}
     ${field('Severidade inicial', select('severity', SEV_HINT.map((v) => ({ v, t: v[0].toUpperCase() + v.slice(1) })), e.severity || 'media'))}
-    <div class="span2">${field('Descrição', textarea('description', e.description, 'rows="3"'))}</div>
+    <details class="more span2"><summary>Mais detalhes (opcional)</summary><div class="form-grid">
+      <div class="span2">${field('Descrição', textarea('description', e.description, 'rows="3"'))}</div>
+      ${field('Observado em', dt('observedAt', e.observedAt || new Date().toISOString(), 'required'))}
+      ${field('Relatado por', input('reporter', e.reporter))}
+      ${field('Ativo relacionado', select('asset', [{ v: '', t: '—' }, ...db.assets.map((a) => ({ v: a.id, t: a.name }))], e.asset))}
+    </div></details>
   </div>`;
 }
 
@@ -75,20 +79,18 @@ export default {
       }
       if (b.dataset.act === 'triage') {
         const others = db.events.filter((x) => x.id !== e.id).map((x) => ({ v: x.id, t: `${x.id} — ${x.title}` }));
-        modal(`Triagem — ${e.id}`, html`${eventForm(e, db)}
-          <div class="form-grid">
-            ${field('Estado', select('status', [{ v: 'novo', t: 'Novo' }, { v: 'analise', t: 'Em análise' }], e.status === 'descartado' ? 'analise' : e.status))}
-            ${field('Correlacionar com (DE.AE-03)', select('related', others, '', `multiple size="4"`), 'Ctrl/⌘ + clique para vários')}
-            <div class="span2">${field('Notas de análise (DE.AE-02, DE.AE-07: CTI e contexto)', textarea('notes', e.notes, 'rows="3"'))}</div>
-          </div>
-          <fieldset class="criteria"><legend>Critérios de declaração atendidos (DE.AE-08)</legend>
+        modal(`Triagem — ${e.id}`, html`<p class="muted">${e.title}</p>
+          ${field('Notas de análise', textarea('notes', e.notes, 'rows="3" placeholder="O que foi verificado, contexto, CTI…"'))}
+          <fieldset class="criteria"><legend>Critérios de incidente atendidos</legend>
             ${db.org.incidentCriteria.map((c, i) => html`<label class="chk"><input type="checkbox" name="crit${i}" ${e.criteria?.includes(c) ? 'checked' : ''}> ${c}</label>`)}
+          </fieldset>
+          <details class="more"><summary>Correlacionar com outros eventos</summary>${field('Eventos relacionados (DE.AE-03)', select('related', others, '', `multiple size="4"`), 'Ctrl/⌘ + clique para vários')}</details>
           </fieldset>`, {
           wide: true,
           onSubmit: (d) => {
             const criteria = db.org.incidentCriteria.filter((_, i) => d[`crit${i}`]);
             Object.keys(d).filter((k) => k.startsWith('crit')).forEach((k) => delete d[k]);
-            Object.assign(e, d, { criteria, related: [...new Set([...(e.related || []), ...(d.related || [])])] });
+            Object.assign(e, d, { status: 'analise', criteria, related: [...new Set([...(e.related || []), ...(d.related || [])])] });
             store.audit('Evento triado', e.id, e.status);
             store.persist(); ctx.rerender();
             if (criteria.length) toast('Critérios de incidente atendidos — considere declarar o incidente.', 'warn');
@@ -104,18 +106,17 @@ export default {
         });
       }
       if (b.dataset.act === 'declare') {
-        if (!e.criteria?.length && !(await confirmBox('Declarar sem critérios?', 'Nenhum critério de declaração foi marcado na triagem. Deseja declarar o incidente mesmo assim?'))) return;
-        modal(`Declarar incidente a partir de ${e.id}`, html`<div class="form-grid">
-          ${field('Título do incidente', input('title', e.title, 'required'))}
-          ${field('Categoria', select('category', CATEGORIES_INCIDENT, 'Outro'))}
-          <div class="span2">${field('Descrição', textarea('description', e.description, 'rows="3"'))}</div>
-        </div>`, {
+        modal(`Declarar incidente a partir de ${e.id}`, html`${field('Título do incidente', input('title', e.title, 'required'))}
+          ${field('Tipo', select('category', CATEGORIES_INCIDENT, 'Outro'))}
+          <input type="hidden" name="description" value="${e.description || ''}">`, {
           submitLabel: 'Declarar',
           onSubmit: async (d) => {
             const now = new Date().toISOString();
             const related = (e.related || []).map(find).filter(Boolean);
+            const pb = PLAYBOOKS.find((p) => p.category === d.category);
+            const roles = store.defaultRoles();
             const inc = await store.createIncident({
-              ...d, detectedAt: e.observedAt, declaredAt: now, awareAt: now,
+              ...d, roles, ...(pb ? { playbooks: [pb.id], tasks: playbookTasks(pb.id).map((k) => ({ ...k, owner: roles[k.role] || roles.handler || '' })) } : {}), detectedAt: e.observedAt, declaredAt: now, awareAt: now,
               assets: [...new Set([e.asset, ...related.map((r) => r.asset)].filter(Boolean))],
               sourceEvents: [e.id, ...related.map((r) => r.id)],
               csf: { 'DE.AE-08': { done: true, at: now, note: e.criteria?.join('; ') || '' }, ...(e.notes ? { 'DE.AE-02': { done: true, at: now, note: e.notes } } : {}), ...(related.length ? { 'DE.AE-03': { done: true, at: now, note: '' } } : {}) },
@@ -123,7 +124,7 @@ export default {
             await store.addTimeline(inc, { at: e.observedAt, type: 'deteccao', text: `Evento ${e.id} (${e.source}): ${e.title}` });
             for (const r of [e, ...related]) { r.status = 'declarado'; r.incident = inc.id; }
             store.persist();
-            ctx.go(`#/incidente/${inc.id}`);
+            ctx.go(`#/incidente/${inc.id}/tarefas`);
           },
         });
       }

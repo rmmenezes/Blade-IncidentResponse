@@ -1,7 +1,7 @@
 // Central de relatórios: executivo, operacional, conformidade, regulatório, IOCs, melhorias, equipe e tecnologias.
 import * as store from '../core/store.js';
 import { html, fmtDate, fmtDuration, diff, download, toCSV, avg } from '../core/util.js';
-import { STATUSES, statusById, SUBCATEGORIES, FUNCTIONS, CATEGORIES, NIST_LINKS } from '../core/nist.js';
+import { roleById, STATUSES, statusById, SUBCATEGORIES, FUNCTIONS, CATEGORIES, NIST_LINKS } from '../core/nist.js';
 import { metrics, slaStatus, notificationStatus, csfProgress, inPeriod, techCoverage, SEVERITIES } from '../core/engine.js';
 import { TECH_STATUS } from '../data/library.js';
 import { ic, sevBadge, statusBadge, fnBadge, empty, bar } from '../ui.js';
@@ -13,7 +13,7 @@ const REPORTS = [
   { id: 'conformidade', name: 'Conformidade NIST CSF', desc: 'Aderência às subcategorias da SP 800-61r3 por incidente e no agregado.', icon: 'shield' },
   { id: 'regulatorio', name: 'Notificações regulatórias', desc: 'Obrigações aplicáveis, prazos, envios, atrasos e dispensas justificadas.', icon: 'alert' },
   { id: 'indicadores', name: 'Indicadores (IOCs)', desc: 'Consolidação de indicadores de todos os incidentes, respeitando o TLP.', icon: 'radar' },
-  { id: 'equipe', name: 'Equipe e carga de trabalho', desc: 'Atribuições, tarefas abertas, atrasadas e concluídas por pessoa.', icon: 'users' },
+  { id: 'equipe', name: 'Áreas e carga de trabalho', desc: 'Tarefas abertas, atrasadas e concluídas por área.', icon: 'users' },
   { id: 'tecnologias', name: 'Tecnologias e processos', desc: 'Cobertura das Funções do CSF, uso nos incidentes e revisões pendentes.', icon: 'gear' },
   { id: 'melhorias', name: 'Lições aprendidas e melhorias', desc: 'Causas raiz, lições registradas e andamento do backlog (ID.IM).', icon: 'up' },
   { id: 'incidentes', name: 'Relatório por incidente', desc: 'Relatório completo e imprimível de um incidente específico.', icon: 'list' },
@@ -128,8 +128,8 @@ const BUILD = {
       return { c, incs, lead: list.filter((i) => i.roles.lead === c.id).length, open: open.length, late: open.filter((t) => t.due && new Date(t.due) < now).length, done: tasks.length - open.length };
     }).filter((r) => r.incs.length || r.open || r.done);
     return {
-      body: table(['Pessoa', 'Área', 'Incidentes', 'Como líder', 'Tarefas abertas', 'Atrasadas', 'Concluídas'], rows.map((r) => [html`<b>${r.c.name}</b>`, r.c.org, r.incs.map((i) => i.id).join(', '), r.lead, r.open, r.late ? html`<b class="txt-late">${r.late}</b>` : 0, r.done])),
-      rows: [['pessoa', 'area', 'incidentes', 'lider', 'abertas', 'atrasadas', 'concluidas'], ...rows.map((r) => [r.c.name, r.c.org, r.incs.map((i) => i.id).join(' '), r.lead, r.open, r.late, r.done])],
+      body: table(['Área', 'Papel', 'Incidentes', 'Coordena', 'Tarefas abertas', 'Atrasadas', 'Concluídas'], rows.map((r) => [html`<b>${r.c.name}</b>`, roleName(r.c.role), r.incs.map((i) => i.id).join(', '), r.lead, r.open, r.late ? html`<b class="txt-late">${r.late}</b>` : 0, r.done])),
+      rows: [['area', 'papel', 'incidentes', 'lider', 'abertas', 'atrasadas', 'concluidas'], ...rows.map((r) => [r.c.name, roleName(r.c.role), r.incs.map((i) => i.id).join(' '), r.lead, r.open, r.late, r.done])],
     };
   },
   tecnologias(db, list) {
@@ -161,6 +161,7 @@ const BUILD = {
   },
 };
 
+const roleName = (r) => roleById[r]?.name.replace(/\s*\(.*\)/, '') || r || '';
 const who = (db, id) => db.contacts.find((c) => c.id === id)?.name || '';
 const link = (i) => html`<a href="#/incidente/${i.id}">${i.id}</a>`;
 function table(head, rows) {

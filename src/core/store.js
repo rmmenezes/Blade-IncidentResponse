@@ -10,7 +10,7 @@ const VERSION = 1;
 export function emptyDB() {
   return {
     version: VERSION,
-    org: { name: 'Minha organização', sector: '', analyst: 'Analista', currentUser: '', enforceGates: false, incidentCriteria: DEFAULT_CRITERIA },
+    org: { name: 'Minha organização', sector: '', analyst: 'Equipe de resposta', currentUser: '', incidentCriteria: DEFAULT_CRITERIA },
     sla: structuredClone(DEFAULT_SLA),
     regulations: structuredClone(DEFAULT_REGULATIONS),
     incidents: [], events: [], assets: [], contacts: [], improvements: [], exercises: [],
@@ -70,8 +70,13 @@ export function persist() { writeRaw(JSON.stringify(db)); emit(); }
 export function replace(next) { db = migrate(next); persist(); }
 
 // Usuário atual: um membro da equipe selecionado no topo, ou o nome livre das configurações.
-export const me = () => db?.contacts.find((c) => c.id === db.org.currentUser) || null;
-export const userName = () => me()?.name || db?.org.analyst || 'Analista';
+// Sem cadastro de pessoas: os registros são assinados pelo nome configurado da equipe.
+export const me = () => null;
+export const userName = () => db?.org.analyst || 'Equipe de resposta';
+
+// Área responsável por um papel (a primeira cadastrada com esse papel).
+export const areaFor = (role) => db?.contacts.find((c) => c.role === role)?.id || '';
+export const defaultRoles = () => Object.fromEntries(['lead', 'handler', 'tech', 'legal', 'comms', 'leadership'].map((r) => [r, areaFor(r)]).filter(([, v]) => v));
 
 export function audit(action, target = '', detail = '') {
   db.audit.unshift({ id: uid('a'), at: new Date().toISOString(), who: userName(), action, target, detail });
@@ -115,7 +120,7 @@ export async function addTimeline(inc, { at, type = 'nota', text, files = [], fi
 }
 
 export async function createIncident(data) {
-  const inc = newIncident(data);
+  const inc = newIncident({ roles: defaultRoles(), ...data });
   recompute(inc);
   db.incidents.unshift(inc);
   await addTimeline(inc, { type: 'sistema', text: `Incidente declarado: ${inc.title} (${inc.severity}).` });

@@ -10,11 +10,12 @@ const CRIT = [{ v: 'alta', t: 'Alta' }, { v: 'media', t: 'Média' }, { v: 'baixa
 
 function contactForm(c = {}) {
   return html`<div class="form-grid">
-    ${field('Nome', input('name', c.name, 'required'))}${field('Papel', select('role', ROLES.map((r) => ({ v: r.id, t: r.name })), c.role || 'handler'))}
-    ${field('Área / organização', input('org', c.org))}${field('E-mail', input('email', c.email, 'type="email"'))}
-    ${field('Telefone', input('phone', c.phone))}
-    <div class="row"><label class="chk"><input type="checkbox" name="oncall" ${c.oncall ? 'checked' : ''}> Plantão</label>
-    <label class="chk"><input type="checkbox" name="external" ${c.external ? 'checked' : ''}> Externo</label></div></div>`;
+    <div class="span2">${field('Área', input('name', c.name, 'required placeholder="Ex.: Infraestrutura e TI"'))}</div>
+    ${field('Papel na resposta', select('role', ROLES.map((r) => ({ v: r.id, t: r.name })), c.role || 'handler'))}
+    ${field('Canal de contato', input('email', c.email, 'placeholder="e-mail, grupo ou ramal"'))}
+    <details class="more span2"><summary>Mais opções</summary><div class="form-grid">
+      ${field('Telefone de acionamento', input('phone', c.phone))}
+      <label class="chk"><input type="checkbox" name="external" ${c.external ? 'checked' : ''}> Área externa (fornecedor, autoridade)</label></div></details></div>`;
 }
 function assetForm(a = {}) {
   return html`<div class="form-grid">
@@ -34,12 +35,14 @@ export default {
       const byRole = ROLES.map((r) => ({ r, n: db.contacts.filter((c) => c.role === r.id).length }));
       const missing = byRole.filter((x) => x.n === 0 && ['lead', 'handler', 'legal', 'comms', 'leadership'].includes(x.r.id));
       body = html`<section class="card">
-        <div class="card-head"><h2>Equipe de resposta e contatos (GV.RR-02, GV.SC-08, RS.CO-02)</h2><button class="btn sm primary" data-act="c-add">${ic('plus')} Novo contato</button></div>
-        ${missing.length ? html`<div class="warnbox">Papéis essenciais sem responsável: ${missing.map((x) => x.r.name).join(', ')}.</div>` : ''}
-        ${db.contacts.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Nome</th><th>Papel</th><th>Área</th><th>Contato</th><th></th><th></th></tr></thead>
-          <tbody>${db.contacts.map((c) => html`<tr><td><b>${c.name}</b></td><td>${roleById[c.role]?.name}</td><td>${c.org}</td><td>${c.email}<br><small>${c.phone}</small></td>
-          <td>${c.oncall ? html`<span class="badge ok">Plantão</span>` : ''} ${c.external ? html`<span class="badge ghost">Externo</span>` : ''}</td>
-          <td><div class="row"><button class="btn sm ghost" data-c-edit="${c.id}">Editar</button><button class="icon-btn" data-c-del="${c.id}" aria-label="Remover">${ic('x')}</button></div></td></tr>`)}</tbody></table></div>` : empty('Nenhum contato cadastrado.')}
+        <div class="card-head"><h2>Áreas da resposta <small class="muted">GV.RR-02</small></h2><button class="btn sm primary" data-act="c-add">${ic('plus')} Nova área</button></div>
+        <p class="small muted">Cadastre áreas, não pessoas. Cada área tem um papel padrão e recebe automaticamente as tarefas desse papel nos playbooks.</p>
+        ${missing.length ? html`<div class="warnbox">Papéis sem área definida: ${missing.map((x) => x.r.name).join(', ')}.</div>` : ''}
+        ${db.contacts.length ? html`<div class="area-grid">${db.contacts.map((c) => { const open = db.incidents.filter((i) => i.status !== 'encerrado').flatMap((i) => i.tasks).filter((t) => t.owner === c.id && t.status !== 'concluida').length;
+          return html`<article class="area-card"><span class="area-ic">${ic(c.external ? 'ext' : 'users')}</span>
+            <div><b>${c.name}</b><small class="muted">${roleById[c.role]?.name || ''}${c.external ? ' · externa' : ''}</small><small>${c.email || ''}${c.phone ? ` · ${c.phone}` : ''}</small>
+              <small class="${open ? '' : 'muted'}">${open} tarefa(s) aberta(s)</small></div>
+            <div class="row"><button class="btn sm ghost" data-c-edit="${c.id}">Editar</button><button class="icon-btn" data-c-del="${c.id}" aria-label="Remover">${ic('x')}</button></div></article>`; })}</div>` : empty('Nenhuma área cadastrada.')}
       </section>`;
     } else if (tab === 'ativos') {
       body = html`<section class="card">

@@ -7,7 +7,7 @@ import library from './library.js';
 import improvements from './improvements.js';
 
 const TABS = [
-  { id: 'equipe', label: 'Equipe', icon: 'users', view: prep },
+  { id: 'equipe', label: 'Áreas', icon: 'users', view: prep },
   { id: 'ativos', label: 'Ativos', icon: 'layers', view: prep },
   { id: 'tecnologias', label: 'Tecnologias', icon: 'gear', view: library },
   { id: 'processos', label: 'Processos', icon: 'list', view: library },
@@ -17,7 +17,7 @@ const TABS = [
 ];
 const ARTS = { equipe: 'team', ativos: 'plan', tecnologias: 'radar', processos: 'procedure', prontidao: 'shield', exercicios: 'restore', melhorias: 'report' };
 const DESC = {
-  equipe: 'Quem responde, com que papel e como contatar (GV.RR-02).',
+  equipe: 'Áreas que respondem, com seu papel e canal de acionamento (GV.RR-02).',
   ativos: 'Inventário e criticidade dos ativos que sustentam o negócio (ID.AM).',
   tecnologias: 'Ferramentas que apoiam cada Função do CSF 2.0.',
   processos: 'Como a resposta é organizada: donos, entradas, saídas e revisões.',

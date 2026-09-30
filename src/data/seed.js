@@ -9,20 +9,21 @@ const ago = (h) => new Date(Date.now() - h * H).toISOString();
 
 export async function demoDB() {
   const db = emptyDB();
-  db.org = { ...db.org, name: 'Blade Demo S.A.', sector: 'Serviços financeiros', analyst: 'Ana Souza', currentUser: 'c1' };
+  db.org = { ...db.org, name: 'Blade Demo S.A.', sector: 'Serviços financeiros', analyst: 'SOC', currentUser: '' };
   db.technologies = db.technologies.map((t, n) => ({ ...t, owner: ['c4', 'c2', 'c4', 'c4', 'c2', 'c4', 'c1', 'c5'][n] || '' }));
   db.processes = db.processes.map((p) => ({ ...p, owner: 'c1', reviewedAt: ago(24 * 90) }));
   db.regulations.find((r) => r.id === 'certbr').enabled = true;
 
+  // Áreas responsáveis (não pessoas): cada uma tem um papel padrão na resposta.
   db.contacts = [
-    { id: 'c1', name: 'Ana Souza', role: 'lead', org: 'SOC interno', email: 'ana.souza@exemplo.com', phone: '+55 11 90000-0001', oncall: true, external: false },
-    { id: 'c2', name: 'Bruno Lima', role: 'handler', org: 'SOC interno', email: 'bruno.lima@exemplo.com', phone: '+55 11 90000-0002', oncall: true, external: false },
-    { id: 'c3', name: 'Carla Mendes', role: 'legal', org: 'Jurídico / DPO', email: 'dpo@exemplo.com', phone: '+55 11 90000-0003', oncall: false, external: false },
-    { id: 'c4', name: 'Diego Rocha', role: 'tech', org: 'Infraestrutura', email: 'diego.rocha@exemplo.com', phone: '+55 11 90000-0004', oncall: false, external: false },
-    { id: 'c5', name: 'Elisa Prado', role: 'comms', org: 'Comunicação', email: 'imprensa@exemplo.com', phone: '+55 11 90000-0005', oncall: false, external: false },
-    { id: 'c6', name: 'Fernando Alves', role: 'leadership', org: 'Diretoria (CISO)', email: 'ciso@exemplo.com', phone: '+55 11 90000-0006', oncall: false, external: false },
-    { id: 'c7', name: 'MSSP Vigilante', role: 'third', org: 'Provedor de MDR', email: 'soc@mssp.exemplo', phone: '0800 000 0000', oncall: true, external: true },
-    { id: 'c8', name: 'CERT.br', role: 'third', org: 'CSIRT nacional', email: 'cert@cert.br', phone: '', oncall: false, external: true },
+    { id: 'c1', name: 'SOC — Resposta a Incidentes', role: 'lead', email: 'soc@exemplo.com', phone: '+55 11 90000-0001', external: false },
+    { id: 'c2', name: 'Segurança da Informação', role: 'handler', email: 'seguranca@exemplo.com', phone: '+55 11 90000-0002', external: false },
+    { id: 'c3', name: 'Jurídico e Privacidade (DPO)', role: 'legal', email: 'dpo@exemplo.com', phone: '+55 11 90000-0003', external: false },
+    { id: 'c4', name: 'Infraestrutura e TI', role: 'tech', email: 'infra@exemplo.com', phone: '+55 11 90000-0004', external: false },
+    { id: 'c5', name: 'Comunicação', role: 'comms', email: 'imprensa@exemplo.com', phone: '+55 11 90000-0005', external: false },
+    { id: 'c6', name: 'Diretoria', role: 'leadership', email: 'diretoria@exemplo.com', phone: '+55 11 90000-0006', external: false },
+    { id: 'c7', name: 'MSSP (provedor de MDR)', role: 'third', email: 'soc@mssp.exemplo', phone: '0800 000 0000', external: true },
+    { id: 'c8', name: 'CERT.br', role: 'third', email: 'cert@cert.br', phone: '', external: true },
   ];
 
   db.assets = [
@@ -54,7 +55,7 @@ export async function demoDB() {
     };
     inc.severity = computeSeverity(inc, db.assets);
     for (const [at, type, text, author] of log) {
-      inc.timeline = await chainAppend(inc.timeline, { id: uid('t'), at, recordedAt: at, author: author || 'Ana Souza', type, text });
+      inc.timeline = await chainAppend(inc.timeline, { id: uid('t'), at, recordedAt: at, author: author || 'SOC', type, text });
     }
     return inc;
   };
@@ -73,16 +74,16 @@ export async function demoDB() {
       { id: uid('i'), type: 'Domínio', value: 'update-cdn-sync.example', desc: 'C2 (beacon)', tlp: 'AMBER', firstSeen: ago(20) },
     ],
     evidence: [
-      { id: uid('e'), name: 'Imagem de memória SRV-FILE-02', type: 'Memória', hash: '9f2c...e1', hashAlg: 'SHA-256', collectedBy: 'Bruno Lima', collectedAt: ago(4.5), location: 'Cofre forense / caso-0003', custody: [{ at: ago(4.5), from: 'Bruno Lima', to: 'Cofre forense', purpose: 'Armazenamento' }] },
-      { id: uid('e'), name: 'Logs VPN (30 dias)', type: 'Log', hash: '1b7d...a9', hashAlg: 'SHA-256', collectedBy: 'Diego Rocha', collectedAt: ago(4), location: 'Bucket evidências (WORM)', custody: [] },
+      { id: uid('e'), name: 'Imagem de memória SRV-FILE-02', type: 'Memória', hash: '9f2c...e1', hashAlg: 'SHA-256', collectedBy: 'Segurança da Informação', collectedAt: ago(4.5), location: 'Cofre forense / caso-0003', custody: [{ at: ago(4.5), from: 'Segurança da Informação', to: 'Cofre forense', purpose: 'Armazenamento' }] },
+      { id: uid('e'), name: 'Logs VPN (30 dias)', type: 'Log', hash: '1b7d...a9', hashAlg: 'SHA-256', collectedBy: 'Infraestrutura e TI', collectedAt: ago(4), location: 'Bucket evidências (WORM)', custody: [] },
     ],
     tasks: [
-      { id: uid('k'), title: 'Isolar SRV-FILE-02 e SRV-ERP-01 via EDR', phase: 'contencao', csf: 'RS.MI-01', owner: 'c2', due: ago(4), status: 'concluida', required: true, doneBy: 'Bruno Lima', doneAt: ago(4.9) },
+      { id: uid('k'), title: 'Isolar SRV-FILE-02 e SRV-ERP-01 via EDR', phase: 'contencao', csf: 'RS.MI-01', owner: 'c2', due: ago(4), status: 'concluida', required: true, doneBy: 'Segurança da Informação', doneAt: ago(4.9) },
       { id: uid('k'), title: 'Desabilitar conta j.pereira e revogar sessões VPN', phase: 'contencao', csf: 'RS.MI-01', owner: 'c4', due: ago(4), status: 'concluida' },
       { id: uid('k'), title: 'Confirmar imutabilidade do repositório de backup', phase: 'contencao', csf: 'RS.MI-01', owner: 'c4', due: ago(-2), status: 'andamento', required: true },
       { id: uid('k'), title: 'Procedimento: Aquisição de memória e disco', phase: 'analise', csf: 'RS.AN-07', owner: 'c2', due: ago(-6), status: 'andamento', required: true, procedure: 'pop-memoria',
         steps: [['Preparar mídia de coleta esterilizada e ferramenta validada', true], ['Adquirir memória RAM', true], ['Adquirir imagem de disco (bloqueio de escrita)', false], ['Calcular SHA-256 das imagens', false], ['Registrar evidência e abrir cadeia de custódia', false], ['Armazenar em local controlado (WORM/cofre)', false]]
-          .map(([text, done]) => ({ id: uid('s'), text, done, role: 'handler', doneBy: done ? 'Bruno Lima' : '', doneAt: done ? ago(4.6) : null })) },
+          .map(([text, done]) => ({ id: uid('s'), text, done, role: 'handler', doneBy: done ? 'Segurança da Informação' : '', doneAt: done ? ago(4.6) : null })) },
       { id: uid('k'), title: 'Avaliar exfiltração e dados pessoais afetados', phase: 'analise', csf: 'RS.AN-08', owner: 'c3', due: ago(-12), status: 'aberta' },
     ],
     comms: [
@@ -94,10 +95,10 @@ export async function demoDB() {
     analysis: { hypothesis: 'Acesso inicial via VPN sem MFA com credencial de infostealer.', rootCause: '', whys: ['', '', '', '', ''], tactics: ['Initial Access', 'Lateral Movement', 'Impact'] },
   }, [
     [ago(30), 'evidencia', 'Primeiro login VPN de 198.51.100.23 (conta j.pereira) — identificado depois nos logs.'],
-    [ago(6), 'deteccao', 'EDR alerta criptografia em massa em SRV-FILE-02.', 'MSSP Vigilante'],
+    [ago(6), 'deteccao', 'EDR alerta criptografia em massa em SRV-FILE-02.', 'MSSP'],
     [ago(5.5), 'status', 'Incidente declarado e triado como S1.'],
-    [ago(4.9), 'acao', 'Hosts isolados via EDR.', 'Bruno Lima'],
-    [ago(4.5), 'evidencia', 'Imagem de memória coletada (SHA-256 registrado).', 'Bruno Lima'],
+    [ago(4.9), 'acao', 'Hosts isolados via EDR.', 'Segurança da Informação'],
+    [ago(4.5), 'evidencia', 'Imagem de memória coletada (SHA-256 registrado).', 'Segurança da Informação'],
   ]);
 
   const inc2 = await mk({

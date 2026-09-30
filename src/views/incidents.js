@@ -2,15 +2,13 @@
 import * as store from '../core/store.js';
 import { html, download, toCSV } from '../core/util.js';
 import { STATUSES, CATEGORIES_INCIDENT, TLP } from '../core/nist.js';
-import { FACTORS, SEVERITIES, computeSeverity, priorityScore, csfProgress } from '../core/engine.js';
+import { SEVERITIES, computeSeverity, csfProgress } from '../core/engine.js';
 import { PLAYBOOKS, playbookById } from '../data/playbooks.js';
 import { unpackFiles } from '../core/files.js';
 import { procedureTask } from './reader.js';
+import { art } from '../art.js';
+import { raw } from '../core/util.js';
 import { ic, toast, confirmBox, sevBadge, statusBadge, when, field, input, dt, textarea, select, formData, empty, bar, tlpBadge } from '../ui.js';
-
-export function factorFields(inc) {
-  return html`${Object.entries(FACTORS).map(([k, f]) => field(f.label, select(k, f.opts.map((t, v) => ({ v, t: `${v} — ${t}` })), inc[k] ?? 0, 'data-type="number"')))}`;
-}
 
 // Abas compartilhadas entre Incidentes e a fila de eventos adversos.
 export function sectionTabs(cur, db) {
@@ -24,28 +22,37 @@ export function playbookTasks(pbId) {
   return pb ? pb.steps.map((s, n) => ({ id: `pb-${pbId}-${n}-${Math.random().toString(36).slice(2, 6)}`, title: s.title, detail: s.detail, role: s.role, phase: s.phase, csf: s.csf, owner: '', due: null, status: 'aberta', playbook: pbId })) : [];
 }
 
+// Impacto rápido → fatores de priorização (ajustáveis depois no incidente).
+const IMPACT = {
+  baixo: { label: 'Baixo', hint: 'pouco efeito no negócio', f: [0, 0, 0, 0] },
+  medio: { label: 'Médio', hint: 'afeta parte de um serviço', f: [1, 1, 1, 0] },
+  alto: { label: 'Alto', hint: 'serviço crítico afetado', f: [2, 2, 1, 1] },
+  critico: { label: 'Crítico', hint: 'operação comprometida', f: [3, 2, 2, 2] },
+};
+
 function newForm(db, q) {
   const now = new Date().toISOString();
-  return html`<div class="page">
-    <div class="page-head"><div><h1>Declarar incidente</h1><p class="muted">Registre, categorize e priorize (DE.AE-08, RS.MA-02, RS.MA-03).</p></div></div>
+  const pb0 = q.get('pb') || '';
+  return html`<div class="page narrow">
+    <div class="page-head"><div><h1>Declarar incidente</h1><p class="muted">Três escolhas e pronto — o resto pode ser completado depois.</p></div></div>
     <form class="card" id="newinc">
-      <div class="form-grid">
-        <div class="span2">${field('Título', input('title', '', 'required placeholder="Ex.: Ransomware no servidor de arquivos"'))}</div>
-        ${field('Categoria', select('category', CATEGORIES_INCIDENT, playbookById[q.get('pb')]?.category || 'Outro'))}
-        ${field('Playbook', select('playbook', [{ v: '', t: '— nenhum —' }, ...PLAYBOOKS.map((p) => ({ v: p.id, t: p.name }))], q.get('pb') || ''), 'As etapas viram tarefas do incidente.')}
+      ${field('1. O que está acontecendo?', input('title', '', 'required placeholder="Ex.: Arquivos criptografados no servidor de arquivos" autofocus'))}
+      <p class="lbl">2. Tipo de incidente <span class="muted">(aplica o playbook correspondente)</span></p>
+      <div class="type-grid">${PLAYBOOKS.map((p) => html`<button type="button" class="type-opt ${p.id === pb0 ? 'on' : ''}" data-pb="${p.id}" data-cat="${p.category}" style="--bk:${p.color}"><span class="type-art">${raw(art(p.art))}</span>${p.short || p.name}</button>`)}
+        <button type="button" class="type-opt ${pb0 ? '' : 'on'}" data-pb="" data-cat="Outro" style="--bk:#667085"><span class="type-art">${raw(art('radar'))}</span>Outro / ainda não sei</button></div>
+      <input type="hidden" name="playbook" value="${pb0}"><input type="hidden" name="category" value="${playbookById[pb0]?.category || 'Outro'}">
+      <p class="lbl">3. Impacto</p>
+      <div class="impact">${Object.entries(IMPACT).map(([k, v]) => html`<button type="button" class="imp-opt imp-${k} ${k === 'medio' ? 'on' : ''}" data-imp="${k}"><b>${v.label}</b><small>${v.hint}</small></button>`)}</div>
+      <input type="hidden" name="impact" value="medio">
+      <label class="chk"><input type="checkbox" name="personalData"> Envolve dados pessoais</label>
+      <details class="more"><summary>Mais detalhes (opcional)</summary><div class="form-grid">
         <div class="span2">${field('Descrição', textarea('description', '', 'rows="3"'))}</div>
-        ${field('Primeira atividade maliciosa (se conhecida)', dt('occurredAt', null))}
         ${field('Detectado em', dt('detectedAt', now, 'required'))}
-        ${field('Declarado em', dt('declaredAt', now, 'required'))}
+        ${field('Primeira atividade maliciosa', dt('occurredAt', null))}
         ${field('TLP', select('tlp', TLP, 'AMBER'))}
-      </div>
-      <h3>Priorização</h3>
-      <div class="form-grid">${factorFields({})}
-        ${field('Ativos afetados', select('assets', db.assets.map((a) => ({ v: a.id, t: `${a.name} (${a.criticality})` })), '', 'multiple size="4"'), 'Ativos de criticalidade alta elevam a prioridade.')}
-        <label class="chk span2"><input type="checkbox" name="personalData"> Envolve dados pessoais (aciona prazos LGPD/GDPR habilitados)</label>
-      </div>
-      <p>Severidade calculada: <span id="sevprev"></span> <span class="muted small" id="scoreprev"></span></p>
-      <div class="row"><button class="btn primary">${ic('alert')} Declarar incidente</button><a class="btn ghost" href="#/incidentes">Cancelar</a></div>
+        ${field('Ativos afetados', select('assets', db.assets.map((a) => ({ v: a.id, t: `${a.name} (${a.criticality})` })), '', 'multiple size="4"'))}
+      </div></details>
+      <div class="submit-row"><span>Severidade: <span id="sevprev"></span></span><span class="spacer"></span><a class="btn ghost" href="#/incidentes">Cancelar</a><button class="btn primary lg">${ic('alert')} Declarar incidente</button></div>
     </form>
   </div>`;
 }
@@ -93,23 +100,27 @@ export default {
     const db = store.get();
     if (sub === 'novo') {
       const form = el.querySelector('#newinc');
-      const upd = () => {
-        const d = formData(form);
-        const s = computeSeverity(d, db.assets);
-        el.querySelector('#sevprev').innerHTML = String(sevBadge(s));
-        el.querySelector('#scoreprev').textContent = `(pontuação ${priorityScore(d, db.assets)}/12)`;
-      };
+      const factors = () => { const f = IMPACT[form.impact.value].f; return { functional: f[0], information: Math.max(f[1], form.personalData.checked ? 2 : 0), recoverability: f[2], scope: f[3] }; };
+      const upd = () => { el.querySelector('#sevprev').innerHTML = String(sevBadge(computeSeverity(factors(), db.assets))); };
+      form.addEventListener('click', (e) => {
+        const b = e.target.closest('button[type=button]'); if (!b) return;
+        if (b.dataset.pb !== undefined) { form.playbook.value = b.dataset.pb; form.category.value = b.dataset.cat; form.querySelectorAll('.type-opt').forEach((x) => x.classList.toggle('on', x === b)); }
+        if (b.dataset.imp) { form.impact.value = b.dataset.imp; form.querySelectorAll('.imp-opt').forEach((x) => x.classList.toggle('on', x === b)); upd(); }
+      });
       form.addEventListener('change', upd); upd();
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const { playbook, ...d } = formData(form);
-        d.awareAt = d.declaredAt;
-        d.csf = { 'DE.AE-08': { done: true, at: d.declaredAt, note: '' }, 'RS.MA-03': { done: true, at: d.declaredAt, note: 'Priorizado na declaração' } };
-        if (playbook) { d.playbooks = [playbook]; d.tasks = playbookTasks(playbook); }
+        const { playbook, impact, ...d } = formData(form);
+        Object.assign(d, factors());
+        const now = new Date().toISOString();
+        d.declaredAt = now; d.awareAt = now;
+        d.roles = store.defaultRoles();
+        d.csf = { 'DE.AE-08': { done: true, at: now, note: '' }, 'RS.MA-03': { done: true, at: now, note: 'Priorizado na declaração' } };
+        if (playbook) { d.playbooks = [playbook]; d.tasks = playbookTasks(playbook).map((k) => ({ ...k, owner: d.roles[k.role] || store.areaFor(k.role) || d.roles.handler || '' })); }
         const pop = db.procedures.find((p) => p.id === ctx.query.get('pop'));
-        if (pop) d.tasks = [...(d.tasks || []), procedureTask(pop, { roles: {}, status: 'triagem' })];
+        if (pop) d.tasks = [...(d.tasks || []), procedureTask(pop, { roles: d.roles, status: 'triagem' })];
         const inc = await store.createIncident(d);
-        ctx.go(`#/incidente/${inc.id}`);
+        ctx.go(`#/incidente/${inc.id}/tarefas`);
       });
       return;
     }

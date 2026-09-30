@@ -20,10 +20,9 @@ export default {
         <h2>Organização</h2>
         <div class="form-grid">
           ${field('Nome da organização', input('name', db.org.name, 'required'))}${field('Setor', input('sector', db.org.sector))}
-          ${field('Nome padrão do usuário', input('analyst', db.org.analyst, 'required'), 'Usado quando nenhum membro da equipe está selecionado no topo da tela.')}
+          ${field('Nome da equipe (assina os registros)', input('analyst', db.org.analyst, 'required'), 'Ex.: SOC, CSIRT, Segurança da Informação.')}
         </div>
         ${field('Critérios de declaração de incidente (DE.AE-08) — um por linha', textarea('criteria', db.org.incidentCriteria.join('\n'), 'rows="6"'))}
-        <label class="chk"><input type="checkbox" name="enforceGates" ${db.org.enforceGates ? 'checked' : ''}> <span><b>Controle de fases:</b> bloquear o avanço de estado enquanto houver tarefas obrigatórias pendentes nas fases anteriores</span></label>
         <button class="btn primary">Salvar</button>
       </form>
 
@@ -64,7 +63,7 @@ export default {
     el.querySelector('#org').addEventListener('submit', (e) => {
       e.preventDefault();
       const f = formData(e.target);
-      Object.assign(db.org, { name: f.name, sector: f.sector, analyst: f.analyst, enforceGates: f.enforceGates, incidentCriteria: f.criteria.split('\n').map((s) => s.trim()).filter(Boolean) });
+      Object.assign(db.org, { name: f.name, sector: f.sector, analyst: f.analyst, incidentCriteria: f.criteria.split('\n').map((s) => s.trim()).filter(Boolean) });
       store.audit('Configurações da organização alteradas'); store.persist(); toast('Salvo.'); ctx.rerender();
     });
     el.querySelector('#sla').addEventListener('submit', (e) => {

@@ -29,16 +29,19 @@ O menu tem 6 itens: **Início, Incidentes, Biblioteca, Relatórios, Organizaçã
 - **Usar em um incidente**: as etapas viram tarefas atribuídas pelo papel.
 
 ### Incidentes
+- **Declarar em 3 escolhas:** o que está acontecendo, tipo de incidente (aplica o playbook) e impacto. As tarefas já saem atribuídas às áreas.
+- **Troca de fase com um clique:** botões *Voltar* e *Avançar*, ou clique direto na fase, sem justificativa. Pendências aparecem só como aviso.
+- **Áreas, não pessoas:** cada área (SOC, Infraestrutura, Jurídico/DPO, Comunicação, Diretoria…) tem um papel padrão e recebe automaticamente as tarefas desse papel.
 - Fila de eventos adversos e declaração pelos critérios definidos (DE.AE-08).
 - 7 abas por incidente: Resumo, Plano de ação, Cronologia e arquivos, Análise, Evidências e IOCs, Comunicação e Encerramento.
-- Priorização S1–S4, SLAs, equipe e papéis, tarefas obrigatórias com passos (quem concluiu e quando) e controle de fases opcional.
+- Severidade S1–S4 em um clique (ou automática pelos fatores), SLAs e tarefas com passos.
 - Linha do tempo encadeada por SHA-256; arquivos e imagens anexados (arrastar, selecionar ou colar); evidências com cadeia de custódia; IOCs em CSV ou STIX 2.1.
 - Notificações regulatórias com prazo (LGPD/ANPD, GDPR, NIS2, SEC, CERT.br), modelos de mensagem, recuperação, lições aprendidas e checklist NIST.
 - Relatório do incidente pronto para imprimir e **pacote do incidente** (`.blade.json` com arquivos) para compartilhar.
 
 ### Relatórios e organização
 - 9 relatórios com filtro de período, PDF e CSV.
-- Organização: equipe, ativos, tecnologias (cobertura por Função do CSF), processos, prontidão, exercícios e melhorias.
+- Organização: áreas, ativos, tecnologias (cobertura por Função do CSF), processos, prontidão, exercícios e melhorias.
 
 ## Dados e privacidade
 

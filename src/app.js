@@ -26,7 +26,7 @@ const NAV = [
   { href: '#/incidentes', match: ['/incidente', '/eventos'], label: 'Incidentes', icon: 'alert', badge: (db) => db.incidents.filter((i) => i.status !== 'encerrado').length },
   { href: '#/biblioteca', match: ['/biblioteca', '/livro'], label: 'Biblioteca', icon: 'book' },
   { href: '#/relatorios', label: 'Relatórios', icon: 'chart' },
-  { href: '#/organizacao', match: ['/organizacao', '/atribuicoes'], label: 'Organização', icon: 'users' },
+  { href: '#/organizacao', match: ['/organizacao', '/atribuicoes'], label: 'Áreas e organização', icon: 'users' },
   { href: '#/config', match: ['/config', '/auditoria', '/referencia'], label: 'Configurações', icon: 'gear' },
 ];
 
@@ -68,25 +68,8 @@ function renderNav(path) {
   })}</div>
   <div class="nav-foot"><a href="${NIST_LINKS.pdf}" target="_blank" rel="noopener" class="nav-nist">${ic('file')}<span><b>NIST SP 800-61r3</b><small>documento oficial (PDF)</small></span></a></div>`);
   document.getElementById('org').textContent = db?.org.name || '';
-  renderUser();
 }
 
-// Seletor de usuário atual (autor dos registros e dono de "minhas tarefas").
-const userBox = document.getElementById('user');
-function renderUser() {
-  const db = store.get();
-  if (!db) { userBox.hidden = true; return; }
-  userBox.hidden = false;
-  const me = store.me();
-  const internal = db.contacts.filter((c) => !c.external);
-  userBox.innerHTML = String(html`<span class="avatar">${(me?.name || db.org.analyst || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()}</span>
-    <select id="usersel" aria-label="Usuário atual"><option value="">${db.org.analyst || 'Analista'}</option>${internal.map((c) => html`<option value="${c.id}" ${c.id === me?.id ? 'selected' : ''}>${c.name}</option>`)}</select>`);
-  userBox.querySelector('#usersel').addEventListener('change', (e) => {
-    db.org.currentUser = e.target.value;
-    store.audit('Usuário atual alterado', store.userName()); store.persist();
-    toast(`Atuando como ${store.userName()}.`); rerender();
-  });
-}
 
 let cleanup = null;
 export async function route() {
@@ -141,7 +124,7 @@ async function demoAttachment() {
     <text x="320" y="120" fill="#f04438" font-family="monospace" font-size="28" text-anchor="middle">YOUR FILES ARE ENCRYPTED</text>
     <text x="320" y="170" fill="#d0d5dd" font-family="monospace" font-size="16" text-anchor="middle">Nota de resgate — SRV-FILE-02 (exemplo fictício)</text>
     <text x="320" y="210" fill="#98a2b3" font-family="monospace" font-size="14" text-anchor="middle">README_RESTORE.txt · extensão .lockbit</text></svg>`;
-  const meta = await saveFile(new File([svg], 'nota-de-resgate-SRV-FILE-02.svg', { type: 'image/svg+xml' }), { context: 'general', addedBy: 'Bruno Lima', caption: 'Captura da nota de resgate' });
+  const meta = await saveFile(new File([svg], 'nota-de-resgate-SRV-FILE-02.svg', { type: 'image/svg+xml' }), { context: 'general', addedBy: 'Segurança da Informação', caption: 'Captura da nota de resgate' });
   inc.attachments.push(meta);
   await store.addTimeline(inc, { type: 'evidencia', text: `Arquivo anexado: ${meta.name}`, files: [meta.sha256], fileIds: [meta.id] });
   store.persist();

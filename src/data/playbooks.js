@@ -126,7 +126,7 @@ const BOOKS = [
     references: [REF.nist, REF.cisaPb, REF.certbr, REF.attack],
   },
   {
-    id: 'bec', name: 'Comprometimento de e-mail corporativo', subtitle: 'BEC — fraude financeira por e-mail', category: 'Comprometimento de e-mail corporativo (BEC)', color: '#6941c6', art: 'bec', version: '2.0',
+    id: 'bec', short: 'E-mail corporativo (BEC)', name: 'Comprometimento de e-mail corporativo', subtitle: 'BEC — fraude financeira por e-mail', category: 'Comprometimento de e-mail corporativo (BEC)', color: '#6941c6', art: 'bec', version: '2.0',
     summary: 'Uso de caixa de e-mail comprometida ou falsificada para fraude financeira, alteração de dados bancários ou roubo de informações.',
     objective: 'Interromper fraudes em andamento, retomar o controle da caixa, identificar mensagens lidas e enviadas pelo atacante e avisar terceiros enganados.',
     scope: 'Caixas corporativas, especialmente financeiro, compras, diretoria e RH.',
@@ -166,7 +166,7 @@ const BOOKS = [
     references: [REF.nist, REF.cisaPb, REF.attack],
   },
   {
-    id: 'data-breach', name: 'Vazamento de dados pessoais', subtitle: 'Exposição, acesso ou exfiltração', category: 'Vazamento / exfiltração de dados', color: '#155eef', art: 'breach', version: '2.0',
+    id: 'data-breach', short: 'Vazamento de dados', name: 'Vazamento de dados pessoais', subtitle: 'Exposição, acesso ou exfiltração', category: 'Vazamento / exfiltração de dados', color: '#155eef', art: 'breach', version: '2.0',
     summary: 'Acesso, divulgação ou exfiltração não autorizada de dados pessoais ou confidenciais, incluindo exposições acidentais.',
     objective: 'Fechar a exposição, determinar o que foi acessado, avaliar risco aos titulares e comunicar ANPD e titulares no prazo.',
     scope: 'Bancos de dados, armazenamento em nuvem, APIs, documentos e dados em posse de fornecedores.',
@@ -207,7 +207,7 @@ const BOOKS = [
     references: [REF.nist, REF.anpd, REF.attack],
   },
   {
-    id: 'ddos', name: 'Negação de serviço (DDoS)', subtitle: 'Indisponibilidade por saturação', category: 'Negação de serviço (DoS/DDoS)', color: '#0e7090', art: 'ddos', version: '2.0',
+    id: 'ddos', short: 'DDoS', name: 'Negação de serviço (DDoS)', subtitle: 'Indisponibilidade por saturação', category: 'Negação de serviço (DoS/DDoS)', color: '#0e7090', art: 'ddos', version: '2.0',
     summary: 'Ataques que esgotam recursos de rede ou de aplicação, degradando ou derrubando serviços.',
     objective: 'Restabelecer a disponibilidade com mitigação do provedor, verificar se o ataque encobre outra ação e informar clientes.',
     scope: 'Sites, APIs, VPN, DNS e links de internet.',
@@ -245,7 +245,7 @@ const BOOKS = [
     references: [REF.nist, REF.cisaPb, REF.attack],
   },
   {
-    id: 'account', name: 'Conta comprometida', subtitle: 'Uso indevido de credenciais válidas', category: 'Comprometimento de conta', color: '#3538cd', art: 'account', version: '2.0',
+    id: 'account', short: 'Conta comprometida', name: 'Conta comprometida', subtitle: 'Uso indevido de credenciais válidas', category: 'Comprometimento de conta', color: '#3538cd', art: 'account', version: '2.0',
     summary: 'Uso de credenciais legítimas por terceiros, incluindo contas privilegiadas, de serviço e de nuvem.',
     objective: 'Bloquear o acesso do atacante, levantar tudo o que a conta fez e remover persistências antes de devolvê-la ao dono.',
     scope: 'Diretório corporativo, nuvem (IaaS/SaaS), VPN e contas de serviço.',
@@ -282,7 +282,7 @@ const BOOKS = [
     references: [REF.nist, REF.cisaPb, REF.attack],
   },
   {
-    id: 'malware', name: 'Malware em endpoint', subtitle: 'Código malicioso em estação ou servidor', category: 'Malware', color: '#c11574', art: 'malware', version: '2.0',
+    id: 'malware', short: 'Malware', name: 'Malware em endpoint', subtitle: 'Código malicioso em estação ou servidor', category: 'Malware', color: '#c11574', art: 'malware', version: '2.0',
     summary: 'Execução de código malicioso (trojan, infostealer, loader, backdoor) em estação ou servidor.',
     objective: 'Isolar o host, entender o que o malware faz, varrer o ambiente pelos indicadores e devolver o equipamento limpo.',
     scope: 'Estações, servidores e dispositivos gerenciados.',
@@ -320,7 +320,7 @@ const BOOKS = [
     references: [REF.nist, REF.sp80083, REF.sp80086, REF.attack],
   },
   {
-    id: 'supply', name: 'Incidente em fornecedor', subtitle: 'Cadeia de suprimentos e terceiros', category: 'Cadeia de suprimentos / terceiro', color: '#4d7c0f', art: 'supply', version: '2.0',
+    id: 'supply', short: 'Fornecedor', name: 'Incidente em fornecedor', subtitle: 'Cadeia de suprimentos e terceiros', category: 'Cadeia de suprimentos / terceiro', color: '#4d7c0f', art: 'supply', version: '2.0',
     summary: 'Comprometimento de fornecedor, software ou serviço de terceiro que afeta a organização.',
     objective: 'Entender a exposição ao fornecedor, cortar integrações de risco, buscar indicadores no ambiente e coordenar comunicação.',
     scope: 'Softwares instalados, SaaS, prestadores com acesso remoto e integrações de dados.',
@@ -395,7 +395,7 @@ const BOOKS = [
     references: [REF.nist, REF.sp80086],
   },
   {
-    id: 'cloud', name: 'Comprometimento em nuvem', subtitle: 'IaaS, PaaS e contas de nuvem', category: 'Configuração incorreta em nuvem', color: '#0086c9', art: 'cloud', version: '1.0',
+    id: 'cloud', short: 'Nuvem', name: 'Comprometimento em nuvem', subtitle: 'IaaS, PaaS e contas de nuvem', category: 'Configuração incorreta em nuvem', color: '#0086c9', art: 'cloud', version: '1.0',
     summary: 'Acesso indevido a contas ou recursos de nuvem, uso abusivo (ex.: mineração) ou exposição por configuração incorreta.',
     objective: 'Revogar acessos indevidos, preservar logs da nuvem, remover recursos e credenciais criados pelo atacante e corrigir a configuração.',
     scope: 'Contas e assinaturas de nuvem pública, Kubernetes e serviços gerenciados.',

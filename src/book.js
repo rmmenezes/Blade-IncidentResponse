@@ -104,8 +104,8 @@ function planChapters(db) {
     { id: 'proposito', title: 'Propósito e escopo', body: html`<p class="bk-lead">Este plano define como <b>${db.org.name}</b> se prepara, detecta, responde e se recupera de incidentes de cibersegurança, conforme o NIST SP 800-61 Rev. 3 e as Funções do CSF 2.0.</p>
       <p>Aplica-se a todos os sistemas, dados, colaboradores e terceiros que processam informações da organização.</p>
       <h3>Critérios de declaração de incidente</h3>${list(db.org.incidentCriteria)}` },
-    { id: 'equipe', title: 'Equipe e contatos', body: db.contacts.length ? html`<table class="bk-tbl"><thead><tr><th>Nome</th><th>Papel</th><th>Área</th><th>Contato</th></tr></thead>
-      <tbody>${db.contacts.map((c) => html`<tr><td><b>${c.name}</b>${c.oncall ? ' · plantão' : ''}</td><td>${role(c.role)}</td><td>${c.org}</td><td>${c.email}<br>${c.phone}</td></tr>`)}</tbody></table>` : html`<p class="bk-muted">Cadastre a equipe em Organização → Equipe.</p>` },
+    { id: 'equipe', title: 'Áreas e acionamento', body: db.contacts.length ? html`<table class="bk-tbl"><thead><tr><th>Área</th><th>Papel</th><th>Contato</th></tr></thead>
+      <tbody>${db.contacts.map((c) => html`<tr><td><b>${c.name}</b>${c.external ? ' · externa' : ''}</td><td>${role(c.role)}</td><td>${c.email || ''}<br>${c.phone || ''}</td></tr>`)}</tbody></table>` : html`<p class="bk-muted">Cadastre as áreas em Organização → Áreas.</p>` },
     { id: 'severidade', title: 'Classificação e severidade', body: html`<p>A prioridade combina quatro fatores (0 a 3 cada) e a criticidade dos ativos afetados:</p>
       <table class="bk-tbl"><tbody>${Object.values(FACTORS).map((f) => html`<tr><td><b>${f.label}</b></td><td>${f.opts.map((o, i) => `${i} — ${o}`).join(' · ')}</td></tr>`)}</tbody></table>
       <table class="bk-tbl"><thead><tr><th>Severidade</th><th>Pontuação</th><th>Triagem</th><th>Contenção</th><th>Recuperação</th></tr></thead>
