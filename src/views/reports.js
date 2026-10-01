@@ -84,11 +84,11 @@ const BUILD = {
     const slaCell = (s) => html`<span class="${s.late ? 'txt-late' : s.done ? 'txt-ok' : 'muted'}">${s.done ? (s.late ? 'fora' : 'ok') : s.late ? 'estourado' : 'em curso'}</span>`;
     const comp = (k) => { const x = rows.map((r) => r.sla.find((s) => s.key === k)).filter((s) => s.done); return x.length ? Math.round((x.filter((s) => !s.late).length / x.length) * 100) : null; };
     return {
-      body: html`<div class="kpis">${[['triage', 'Triagem'], ['contain', 'Contenção'], ['recover', 'Recuperação']].map(([k, l]) => html`<div class="kpi"><span>SLA de ${l.toLowerCase()} cumprido</span><strong>${comp(k) == null ? '—' : comp(k) + '%'}</strong></div>`)}
+      body: html`<div class="kpis"><div class="kpi"><span>SLA de contenção cumprido</span><strong>${comp('contain') == null ? '—' : comp('contain') + '%'}</strong></div>
           <div class="kpi"><span>Tempo médio até detecção</span><strong>${fmtDuration(avg(rows.map((r) => r.d)))}</strong></div></div>
-        ${table(['ID', 'Sev.', 'Estado', 'Até detecção', 'Até contenção', 'Até recuperação', 'SLA triagem', 'SLA contenção', 'SLA recuperação', 'Tarefas'],
+        ${table(['ID', 'Sev.', 'Estado', 'Até detecção', 'Até contenção', 'Até recuperação', 'SLA de contenção', 'Tarefas'],
           rows.map(({ i, d, c, r, sla }) => [link(i), i.severity, statusById[i.status].name, fmtDuration(d), fmtDuration(c), fmtDuration(r), ...sla.map(slaCell), `${i.tasks.filter((t) => t.status === 'concluida').length}/${i.tasks.length}`]))}`,
-      rows: [['id', 'severidade', 'estado', 'ms_ate_deteccao', 'ms_ate_contencao', 'ms_ate_recuperacao', 'sla_triagem', 'sla_contencao', 'sla_recuperacao'], ...rows.map(({ i, d, c, r, sla }) => [i.id, i.severity, i.status, d ?? '', c ?? '', r ?? '', ...sla.map((s) => (s.done ? (s.late ? 'fora' : 'ok') : s.late ? 'estourado' : 'em_curso'))])],
+      rows: [['id', 'severidade', 'estado', 'ms_ate_deteccao', 'ms_ate_contencao', 'ms_ate_recuperacao', 'sla_contencao'], ...rows.map(({ i, d, c, r, sla }) => [i.id, i.severity, i.status, d ?? '', c ?? '', r ?? '', ...sla.map((s) => (s.done ? (s.late ? 'fora' : 'ok') : s.late ? 'estourado' : 'em_curso'))])],
     };
   },
   conformidade(db, list) {

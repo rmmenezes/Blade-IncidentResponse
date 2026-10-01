@@ -32,11 +32,10 @@ O menu tem 6 itens: **Início, Incidentes, Biblioteca, Relatórios, Organizaçã
 - **Declarar em 3 escolhas:** o que está acontecendo, tipo de incidente (aplica o playbook) e impacto. As tarefas já saem atribuídas às áreas.
 - **Troca de fase com um clique:** botões *Voltar* e *Avançar*, ou clique direto na fase, sem justificativa. Pendências aparecem só como aviso.
 - **Áreas, não pessoas:** cada área (SOC, Infraestrutura, Jurídico/DPO, Comunicação, Diretoria…) tem um papel padrão e recebe automaticamente as tarefas desse papel.
-- Fila de eventos adversos e declaração pelos critérios definidos (DE.AE-08).
-- 7 abas por incidente: Resumo, Plano de ação, Cronologia e arquivos, Análise, Evidências e IOCs, Comunicação e Encerramento.
+- **Uma tela por fase** (Triagem, Análise, Contenção, Erradicação, Recuperação, Pós-incidente, Encerrado), com as ações da fase, as boas práticas NIST, registro rápido com anexos e o histórico da fase. A cronologia completa fica no botão *Cronologia*.
 - Severidade S1–S4 em um clique (ou automática pelos fatores), SLAs e tarefas com passos.
 - Linha do tempo encadeada por SHA-256; arquivos e imagens anexados (arrastar, selecionar ou colar); evidências com cadeia de custódia; IOCs em CSV ou STIX 2.1.
-- Notificações regulatórias com prazo (LGPD/ANPD, GDPR, NIS2, SEC, CERT.br), modelos de mensagem, recuperação, lições aprendidas e checklist NIST.
+- Notificações com prazo: LGPD (ANPD e titulares, 3 dias úteis) e CERT.br; SLA único de contenção por severidade; modelos de mensagem, recuperação, lições aprendidas e checklist NIST.
 - Relatório do incidente pronto para imprimir e **pacote do incidente** (`.blade.json` com arquivos) para compartilhar.
 
 ### Relatórios e organização

@@ -50,7 +50,10 @@ function migrate(d) {
   const base = emptyDB();
   const out = { ...base, ...d, org: { ...base.org, ...d.org }, seq: { ...base.seq, ...d.seq } };
   // Novas regulações padrão aparecem sem sobrescrever as editadas.
-  for (const r of base.regulations) if (!out.regulations.some((x) => x.id === r.id)) out.regulations.push(r);
+  // Somente LGPD e CERT.br: mantém prazo/ativação editados, descarta as demais regras.
+  out.regulations = base.regulations.map((r) => ({ ...r, ...(d.regulations || []).find((x) => x.id === r.id), name: r.name, note: r.note, when: r.when, trigger: r.trigger }));
+  // SLA único de contenção.
+  out.sla = Object.fromEntries(Object.entries(base.sla).map(([k, v]) => [k, { contain: Number(d.sla?.[k]?.contain) || v.contain }]));
   for (const i of out.incidents) { i.attachments ||= []; i.tools ||= []; i.team ||= []; }
   // Procedimentos padrão ganham o conteúdo novo sem perder edições da organização.
   for (const def of DEFAULT_PROCEDURES) {
@@ -112,8 +115,8 @@ export function recompute(inc) {
   inc.updatedAt = new Date().toISOString();
 }
 
-export async function addTimeline(inc, { at, type = 'nota', text, files = [], fileIds = [] }) {
-  const entry = { id: uid('t'), at: at || new Date().toISOString(), recordedAt: new Date().toISOString(), author: userName(), type, text, phase: inc.status };
+export async function addTimeline(inc, { at, type = 'nota', text, files = [], fileIds = [], phase }) {
+  const entry = { id: uid('t'), at: at || new Date().toISOString(), recordedAt: new Date().toISOString(), author: userName(), type, text, phase: phase || inc.status };
   if (files.length) entry.files = files;
   if (fileIds.length) entry.fileIds = fileIds;
   inc.timeline = await chainAppend(inc.timeline, entry);

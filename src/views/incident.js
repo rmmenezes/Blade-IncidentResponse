@@ -10,12 +10,9 @@ import { playbookTasks } from './incidents.js';
 import { procedureTask } from './reader.js';
 import { art } from '../art.js';
 
-const TABS = [
-  ['visao', 'Resumo', 'dash'], ['tarefas', 'Plano de ação', 'check'], ['linha', 'Cronologia e arquivos', 'clock'], ['analise', 'Análise', 'search'],
-  ['evidencias', 'Evidências e IOCs', 'lock'], ['comunicacao', 'Comunicação', 'comms'], ['encerramento', 'Encerramento', 'shield'],
-];
-// Abas antigas apontam para as novas.
-const ALIAS = { equipe: 'visao', anexos: 'linha', iocs: 'evidencias', recuperacao: 'encerramento', licoes: 'encerramento', nist: 'encerramento' };
+// Abas antigas apontam para as telas de fase equivalentes ('' = fase atual).
+const ALIAS = { visao: '', tarefas: '', equipe: '', linha: 'cronologia', anexos: 'cronologia', analise: 'analise', evidencias: 'analise', iocs: 'analise',
+  comunicacao: 'analise', recuperacao: 'recuperacao', encerramento: 'pos', licoes: 'pos', nist: 'pos' };
 const TL_TYPES = { deteccao: 'Detecção', acao: 'Ação', evidencia: 'Evidência', decisao: 'Decisão', comunicacao: 'Comunicação', nota: 'Nota', status: 'Estado', sistema: 'Sistema' };
 const TASK_ST = { aberta: 'Aberta', andamento: 'Em andamento', bloqueada: 'Bloqueada', concluida: 'Concluída' };
 const AUDIENCES = { interno: 'Interno', externo: 'Externo', lideranca: 'Liderança', regulador: 'Regulador', titulares: 'Titulares de dados', clientes: 'Clientes', publico: 'Público / imprensa', policia: 'Autoridade policial', fornecedor: 'Fornecedor / terceiro', seguradora: 'Seguradora', csirt: 'CSIRT / ISAC' };
@@ -61,14 +58,7 @@ function tabVisao(inc, db) {
   const lead = contactName(db, inc.roles.lead);
   const openTasks = inc.tasks.filter((t) => t.status !== 'concluida');
   const reqOpen = openTasks.filter((t) => t.required).length;
-  return html`<div class="summary-strip">
-      <div><span>Coordenação</span><b>${lead || '—'}</b></div>
-      <div><span>Áreas envolvidas</span><b>${teamIds(inc).length}</b></div>
-      <div><span>Tarefas abertas</span><b>${openTasks.length}${reqOpen ? html` <small class="txt-late">(${reqOpen} obrigatórias)</small>` : ''}</b></div>
-      <div><span>Declarado há</span><b>${fmtDuration(Date.now() - new Date(inc.declaredAt))}</b></div>
-      <div><span>Arquivos</span><b>${inc.attachments.length}</b></div>
-    </div>
-    <div class="grid2">
+  return html`<div class="grid2">
     <section class="card">
       <h2>Dados do incidente</h2>
       <div class="form-grid">
@@ -98,12 +88,6 @@ function tabVisao(inc, db) {
           ${Object.entries(FACTORS).map(([k, f]) => field(f.label, bs(k, inc, f.opts.map((t, v) => ({ v, t: `${v} — ${t}` })), 'data-num="1"')))}
         </div></details>
       </section>
-      <section class="card">
-        <h2>SLAs</h2>
-        <ul class="sla">${sla.map((s) => html`<li class="${s.done ? (s.late ? 'late' : 'ok') : s.late ? 'late' : 'run'}">
-          <b>${s.label}</b><span>meta ${when(s.due)}</span>
-          <span>${s.done ? `concluída ${fmtDate(s.doneAt)}${s.late ? ' (fora do SLA)' : ''}` : s.late ? `atrasada ${fmtDuration(-s.remaining)}` : `restam ${fmtDuration(s.remaining)}`}</span></li>`)}</ul>
-      </section>
 
     </div>
   </div>`;
@@ -114,20 +98,6 @@ export function teamIds(inc) {
   return [...new Set([...(inc.team || []), ...Object.values(inc.roles || {}).filter(Boolean), ...inc.tasks.map((t) => t.owner).filter(Boolean)])];
 }
 
-function tabEquipe(inc, db) {
-  const ids = teamIds(inc);
-  const rolesOf = (id) => Object.entries(inc.roles).filter(([, v]) => v === id).map(([r]) => roleById[r]?.name.replace(/\s*\(.*\)/, '') || r);
-  return html`<section class="card">
-      <div class="card-head"><h2>Áreas envolvidas</h2><a class="small" href="#/organizacao/equipe">gerenciar áreas</a></div>
-      <p class="small muted">Clique para incluir ou retirar uma área. As tarefas dos playbooks são atribuídas automaticamente pela área de cada papel.</p>
-      ${db.contacts.length ? html`<div class="area-chips">${db.contacts.map((c) => { const on = ids.includes(c.id); const roles = rolesOf(c.id); const ts = inc.tasks.filter((t) => t.owner === c.id && t.status !== 'concluida').length;
-        return html`<button class="area-chip ${on ? 'on' : ''}" data-area="${c.id}" ${roles.length && on ? 'title="Área com papel no incidente"' : ''}>${ic(c.external ? 'ext' : 'users')}<span><b>${c.name}</b><small>${roles.join(' · ') || (on ? 'apoio' : 'não envolvida')}${ts ? ` · ${ts} tarefa(s)` : ''}</small></span></button>`; })}</div>`
-        : empty('Nenhuma área cadastrada.', html`<a class="btn sm" href="#/organizacao/equipe">Cadastrar áreas</a>`)}
-      <details class="more"><summary>Ajustar área por papel</summary>
-        <div class="form-grid">${ROLES.filter((r) => CORE_ROLES.includes(r.id)).map((r) => field(r.name, bs(`roles.${r.id}`, inc, contactOpts(db))))}</div></details>
-    </section>
-  <p class="right small"><button class="btn ghost sm danger-link" data-act="delete">${ic('trash')} Excluir incidente</button></p>`;
-}
 const CORE_ROLES = ['lead', 'handler', 'tech', 'legal', 'comms', 'leadership'];
 export const initials = (n = '') => n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
@@ -160,20 +130,20 @@ const fileChip = (a) => html`<button type="button" class="fchip" data-file-view=
 
 function taskOwnerSel(db, t) { return select('', contactOpts(db), t.owner, `data-task="${t.id}" data-k="owner" aria-label="Responsável"`); }
 
-function tabTarefas(inc, db) {
-  const phases = STATUSES.filter((s) => s.id !== 'encerrado');
-  const blockers = phaseBlockers(inc, 'encerrado');
+function tabTarefas(inc, db, only) {
+  const phases = STATUSES.filter((s) => s.id !== 'encerrado' && (!only || s.id === only));
+  const blockers = phaseBlockers(inc, 'encerrado').filter((t) => !only || t.phase === only);
   return html`<section class="card">
-    <div class="card-head"><h2>Tarefas e passos</h2>
+    <div class="card-head"><h2>${only ? 'Ações desta fase' : 'Tarefas e passos'}</h2>
       <div class="row">${select('pb', [{ v: '', t: 'Aplicar playbook…' }, ...PLAYBOOKS.map((p) => ({ v: p.id, t: p.name }))], '', 'data-act="apply-pb" aria-label="Aplicar playbook"')}
       ${select('pop', [{ v: '', t: 'Aplicar procedimento…' }, ...db.procedures.map((p) => ({ v: p.id, t: `${p.name} (v${p.version})` }))], '', 'data-act="apply-pop" aria-label="Aplicar procedimento"')}
       <button class="btn sm primary" data-act="task-add">${ic('plus')} Nova tarefa</button></div></div>
     ${blockers.length ? html`<p class="small"><b class="txt-late">${blockers.length} tarefa(s) obrigatória(s) pendente(s)</b></p>` : ''}
-    ${inc.playbooks.length ? html`<div class="applied">${inc.playbooks.map((id2) => playbookById[id2]).filter(Boolean).map((p) => html`<a class="applied-bk" href="#/livro/pb-${p.id}" style="--bk:${p.color}"><span class="mini-cover">${raw(art(p.art))}</span><span><small class="muted">Playbook aplicado</small><b>${p.name}</b><small>Abrir o livro →</small></span></a>`)}</div>` : html`<a class="applied-bk ghost" href="#/biblioteca"><span class="mini-cover">${raw(art('guide'))}</span><span><small class="muted">Nenhum playbook aplicado</small><b>Escolher na biblioteca</b><small>ou use o seletor acima</small></span></a>`}
+    ${only && only !== 'triagem' ? '' : inc.playbooks.length ? html`<div class="applied">${inc.playbooks.map((id2) => playbookById[id2]).filter(Boolean).map((p) => html`<a class="applied-bk" href="#/livro/pb-${p.id}" style="--bk:${p.color}"><span class="mini-cover">${raw(art(p.art))}</span><span><small class="muted">Playbook aplicado</small><b>${p.name}</b><small>Abrir o livro →</small></span></a>`)}</div>` : html`<a class="applied-bk ghost" href="#/biblioteca"><span class="mini-cover">${raw(art('guide'))}</span><span><small class="muted">Nenhum playbook aplicado</small><b>Escolher na biblioteca</b><small>ou use o seletor acima</small></span></a>`}
     ${phases.map((ph) => {
       const ts = inc.tasks.filter((t) => t.phase === ph.id);
       if (!ts.length) return '';
-      return html`<h3 class="ph">${ph.name} <small class="muted">${ts.filter((t) => t.status === 'concluida').length}/${ts.length}</small></h3>
+      return html`${only ? '' : html`<h3 class="ph">${ph.name} <small class="muted">${ts.filter((t) => t.status === 'concluida').length}/${ts.length}</small></h3>`}
       <div class="tasklist">${ts.map((t) => { const p = taskProgress(t); const late = t.status !== 'concluida' && t.due && new Date(t.due) < new Date();
         return html`<div class="task ${t.status === 'concluida' ? 'done' : ''}">
         <div class="task-main">
@@ -190,7 +160,7 @@ function tabTarefas(inc, db) {
           ${s.done && s.doneBy ? html`<small class="muted"> — ${s.doneBy}, ${fmtDate(s.doneAt)}</small>` : ''}</span></label></li>`)}</ol>` : ''}
       </div>`; })}</div>`;
     })}
-    ${!inc.tasks.length ? empty('Sem tarefas. Aplique um playbook, um procedimento ou crie tarefas manualmente.') : ''}
+    ${!inc.tasks.filter((t) => !only || t.phase === only).length ? empty(only ? 'Nenhuma ação prevista para esta fase. Crie uma tarefa ou aplique um procedimento.' : 'Sem tarefas. Aplique um playbook, um procedimento ou crie tarefas manualmente.') : ''}
   </section>`;
 }
 
@@ -254,7 +224,7 @@ function tabAnalise(inc, db) {
 function tabEvidencias(inc) {
   return html`<section class="card">
     <div class="card-head"><h2>Evidências e cadeia de custódia (RS.AN-07)</h2><button class="btn sm primary" data-act="ev-add">${ic('plus')} Nova evidência</button></div>
-    <p class="small muted">O hash SHA-256 é calculado localmente. Opcionalmente, uma cópia do arquivo pode ficar guardada neste navegador (aba Arquivos).</p>
+    <p class="small muted">O hash SHA-256 é calculado localmente. Opcionalmente, uma cópia do arquivo fica guardada neste navegador (veja em Cronologia).</p>
     ${inc.evidence.length ? inc.evidence.map((e) => html`<article class="evid">
       <div class="card-head"><h3>${e.name}</h3><div class="row"><button class="btn sm" data-ev-transfer="${e.id}">Transferir custódia</button><button class="icon-btn" data-ev-del="${e.id}" aria-label="Remover">${ic('x')}</button></div></div>
       <dl class="dl">
@@ -287,9 +257,9 @@ function tabComunicacao(inc, db) {
     <section class="card">
       <h2>Notificações obrigatórias (RS.CO-02)</h2>
       <div class="row">${bc('personalData', inc, 'Envolve dados pessoais')}</div>
-      <details class="more"><summary>Datas de início da contagem</summary><div class="form-grid">
+      <details class="more"><summary>Data de ciência do incidente (início da contagem LGPD)</summary><div class="form-grid">
         ${field('Ciência do incidente', bd('awareAt', inc))}
-        ${field('Materialidade determinada em', bd('materialAt', inc))}</div></details>
+</div></details>
       ${ns.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th>Obrigação</th><th>Destinatário</th><th>Prazo</th><th>Estado</th><th></th></tr></thead>
         <tbody>${ns.map((n) => html`<tr class="ns-${n.state.replace(/\s/g, '-')}"><td><b>${n.reg.name}</b><br><small class="muted">${n.reg.note}</small></td><td>${n.reg.authority}</td>
           <td>${when(n.due)}</td><td><span class="badge ns">${n.state}</span>${n.rec.sentAt ? html`<br><small>${fmtDate(n.rec.sentAt)} ${n.rec.ref ? '· ' + n.rec.ref : ''}</small>` : ''}${n.rec.waived ? html`<br><small>${n.rec.reason}</small>` : ''}</td>
@@ -356,15 +326,74 @@ function tabNist(inc) {
   </section>`;
 }
 
-const RENDER = {
-  visao: (i, db) => html`${tabVisao(i, db)}${tabEquipe(i, db)}`,
-  tarefas: tabTarefas,
-  linha: (i, db) => html`${tabLinha(i, db)}${tabAnexos(i, db)}`,
-  analise: tabAnalise,
-  evidencias: (i, db) => html`${tabEvidencias(i, db)}${tabIocs(i, db)}`,
-  comunicacao: tabComunicacao,
-  encerramento: (i, db) => html`${tabRecuperacao(i, db)}${tabLicoes(i, db)}${tabNist(i, db)}`,
+const viewOf = (inc, tab) => { const t = tab in ALIAS ? ALIAS[tab] : tab; return PHASE_VIEW[t] ? t : inc.status; };
+
+// Cada fase tem a sua tela, com as ações e registros daquele momento.
+const PHASE_VIEW = {
+  triagem: (i, db) => html`${tabTarefas(i, db, 'triagem')}${tabVisao(i, db)}`,
+  analise: (i, db) => html`${tabTarefas(i, db, 'analise')}${tabAnalise(i, db)}${tabComunicacao(i, db)}${tabEvidencias(i, db)}${tabIocs(i, db)}`,
+  contencao: (i, db) => html`${tabTarefas(i, db, 'contencao')}${tabIocs(i, db)}${tabEvidencias(i, db)}`,
+  erradicacao: (i, db) => html`${tabTarefas(i, db, 'erradicacao')}${tabIocs(i, db)}`,
+  recuperacao: (i, db) => html`${tabTarefas(i, db, 'recuperacao')}${tabRecuperacao(i, db)}${tabComunicacao(i, db)}`,
+  pos: (i, db) => html`${tabTarefas(i, db, 'pos')}${tabLicoes(i, db)}`,
+  encerrado: (i, db) => closingView(i, db),
+  cronologia: (i, db) => html`${tabLinha(i, db)}${tabAnexos(i, db)}`,
 };
+
+// Faixa de resumo exibida em todas as telas do incidente.
+function summaryStrip(inc, db) {
+  const sla = slaStatus(inc, db.sla)[0];
+  const lead = contactName(db, inc.roles.lead);
+  const openTasks = inc.tasks.filter((t) => t.status !== 'concluida');
+  const reqOpen = openTasks.filter((t) => t.required).length;
+  return html`<div class="summary-strip">
+      <div><span>Coordenação</span><b>${lead || '—'}</b></div>
+      <div><span>Tarefas abertas</span><b>${openTasks.length}${reqOpen ? html` <small class="txt-late">(${reqOpen} obrigatórias)</small>` : ''}</b></div>
+      <div class="${sla ? (sla.late ? 'sla-late' : sla.done ? 'sla-ok' : '') : ''}"><span>SLA de contenção</span><b>${!sla ? '—' : sla.done ? (sla.late ? 'cumprido com atraso' : 'cumprido') : sla.late ? `atrasado ${fmtDuration(-sla.remaining)}` : `restam ${fmtDuration(sla.remaining)}`}</b></div>
+      <div><span>Declarado há</span><b>${fmtDuration(Date.now() - new Date(inc.declaredAt))}</b></div>
+      <div><span>Arquivos</span><b>${inc.attachments.length}</b></div>
+    </div>`;
+}
+
+// Cartão de abertura da fase: objetivo, boas práticas NIST e registro rápido.
+function phaseIntro(inc, view) {
+  const st = statusById[view];
+  const goal = inc.playbooks.map((id2) => playbookById[id2]?.phases.find((ph) => ph.id === view)?.goal).find(Boolean);
+  const subs = SUBCATEGORIES.filter((x) => x.phase === view);
+  const logs = inc.timeline.filter((e) => e.phase === view).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 5);
+  return html`<section class="phase-intro">
+    <div class="pi-main">
+      <p class="eyebrow">Fase ${statusIndex(view) + 1} de ${STATUSES.length}</p>
+      <h2>${st.name}</h2>
+      <p class="muted">${goal || st.hint}</p>
+      <form class="quicklog" data-quicklog="${view}">
+        <textarea name="text" rows="2" placeholder="Registrar o que foi feito nesta fase…" required></textarea>
+        <div class="row"><label class="btn sm ghost">${ic('upload')} Anexar<input type="file" name="_files" multiple hidden></label><span class="spacer"></span><button class="btn sm primary">${ic('plus')} Registrar</button></div>
+      </form>
+      ${logs.length ? html`<ul class="pi-log">${logs.map((e) => html`<li><time>${fmtDate(e.at)}</time><span>${e.text}</span></li>`)}</ul>` : ''}
+    </div>
+    ${subs.length ? html`<div class="pi-nist"><p class="eyebrow">Boas práticas NIST</p>${subs.map((x) => csfCheck(inc, x.id))}</div>` : ''}
+  </section>`;
+}
+
+function closingView(inc, db) {
+  const p = csfProgress(inc);
+  const durs = phaseDurations(inc);
+  return html`<section class="card closing">
+      <div class="closing-art">${raw(art('shield'))}</div>
+      <div><p class="eyebrow">Encerramento</p><h2>${inc.status === 'encerrado' ? 'Incidente encerrado' : 'Pronto para encerrar?'}</h2>
+        <p class="muted">Documentação concluída (RC.RP-06). Gere o relatório final e guarde o pacote do incidente.</p>
+        <div class="row"><a class="btn primary" href="#/incidente/${inc.id}/relatorio">${ic('print')} Relatório final</a><button class="btn" data-act="pkg">${ic('down')} Pacote do incidente</button><a class="btn" href="#/incidente/${inc.id}/cronologia">${ic('clock')} Cronologia</a></div></div>
+    </section>
+    <div class="stats">
+      <div class="stat"><span class="stat-ic">${ic('shield')}</span><div><strong>${p.pct}%</strong><span>aderência ao NIST CSF</span></div></div>
+      <div class="stat"><span class="stat-ic">${ic('check')}</span><div><strong>${inc.tasks.filter((t) => t.status === 'concluida').length}/${inc.tasks.length}</strong><span>tarefas concluídas</span></div></div>
+      <div class="stat"><span class="stat-ic">${ic('clock')}</span><div><strong>${fmtDuration(durs.reduce((a, d) => a + d.ms, 0))}</strong><span>duração total</span></div></div>
+      <div class="stat"><span class="stat-ic">${ic('file')}</span><div><strong>${inc.evidence.length + inc.attachments.length}</strong><span>evidências e arquivos</span></div></div>
+    </div>
+    ${tabNist(inc)}
+    <p class="right small"><button class="btn ghost sm danger-link" data-act="delete">${ic('trash')} Excluir incidente</button></p>`;
+}
 
 /* ---------- Modelos de mensagem ---------- */
 function templates(inc, db) {
@@ -380,14 +409,15 @@ function templates(inc, db) {
 
 export default {
   title: ([id]) => id,
-  render([id, tab = 'visao']) {
+  render([id, tab = '']) {
     const db = store.get();
     const inc = store.incident(id);
     if (!inc) return html`<div class="page"><div class="card"><h2>Incidente ${id} não encontrado</h2><a class="btn" href="#/incidentes">Voltar</a></div></div>`;
-    tab = ALIAS[tab] || tab;
-    if (!RENDER[tab]) tab = 'visao';
+    const view = viewOf(inc, tab);
     const cur = statusIndex(inc.status);
+    const vi = statusIndex(view);
     const p = csfProgress(inc);
+    const isPhase = view !== 'cronologia';
     return html`<div class="page">
       <div class="page-head">
         <div>
@@ -396,26 +426,40 @@ export default {
           <div class="row">${sevBadge(inc.severity)} ${statusBadge(inc.status)} ${tlpBadge(inc.tlp)} <span class="badge ghost">${inc.category}</span>
             ${inc.personalData ? html`<span class="badge warn">Dados pessoais</span>` : ''}<span class="muted small">CSF ${p.pct}%</span></div>
         </div>
-        <div class="row"><a class="btn" href="#/incidente/${inc.id}/relatorio">${ic('print')} Relatório</a><button class="btn" data-act="pkg" title="JSON com o incidente e seus arquivos">${ic('down')} Pacote</button></div>
+        <div class="row"><a class="btn ${view === 'cronologia' ? 'primary' : ''}" href="#/incidente/${inc.id}/cronologia">${ic('clock')} Cronologia</a><a class="btn" href="#/incidente/${inc.id}/relatorio">${ic('print')} Relatório</a><button class="btn" data-act="pkg" title="JSON com o incidente e seus arquivos">${ic('down')} Pacote</button></div>
       </div>
-      <ol class="stepper">${STATUSES.map((s, i) => html`<li class="${i < cur ? 'past' : i === cur ? 'cur' : ''}"><button data-status="${s.id}" title="${s.hint}" ${i === cur ? 'aria-current="step"' : ''}><span>${i + 1}</span>${s.name}</button></li>`)}</ol>
-      <div class="phase-nav">
-        ${cur > 0 ? html`<button class="btn" data-status="${STATUSES[cur - 1].id}">← Voltar para ${STATUSES[cur - 1].name}</button>` : html`<span></span>`}
-        <p class="hint-line">${ic('info')} ${statusById[inc.status].hint}</p>
-        ${cur < STATUSES.length - 1 ? html`<button class="btn primary" data-status="${STATUSES[cur + 1].id}">Avançar para ${STATUSES[cur + 1].name} →</button>` : html`<span></span>`}
-      </div>
-      <nav class="tabs inc-tabs" aria-label="Seções do incidente">${TABS.map(([k, t, icon]) => { const n = k === 'tarefas' ? inc.tasks.filter((x) => x.status !== 'concluida').length : k === 'linha' ? inc.attachments.length : k === 'evidencias' ? inc.evidence.length + inc.iocs.length : 0;
-        return html`<a class="tab ${k === tab ? 'on' : ''}" href="#/incidente/${inc.id}/${k}">${ic(icon)} ${t}${n ? html` <em>${n}</em>` : ''}</a>`; })}</nav>
-      ${RENDER[tab](inc, db)}
+      <ol class="stepper phase-steps">${STATUSES.map((s2, i) => { const n = inc.tasks.filter((t) => t.phase === s2.id && t.status !== 'concluida').length;
+        return html`<li class="${i < cur ? 'past' : i === cur ? 'cur' : ''} ${s2.id === view ? 'view' : ''}"><a href="#/incidente/${inc.id}/${s2.id}" ${s2.id === view ? 'aria-current="page"' : ''}>
+          <span>${i < cur ? '✓' : i + 1}</span><b>${s2.name}</b>${i === cur ? html`<small>fase atual</small>` : n ? html`<small>${n} pendente(s)</small>` : ''}</a></li>`; })}</ol>
+      ${isPhase ? html`<div class="phase-nav">
+        ${view === inc.status
+          ? html`${cur > 0 ? html`<button class="btn" data-status="${STATUSES[cur - 1].id}">← Voltar para ${STATUSES[cur - 1].name}</button>` : html`<span></span>`}<span></span>
+            ${cur < STATUSES.length - 1 ? html`<button class="btn primary" data-status="${STATUSES[cur + 1].id}">Concluir fase e avançar para ${STATUSES[cur + 1].name} →</button>` : html`<span></span>`}`
+          : html`<a class="btn" href="#/incidente/${inc.id}/${inc.status}">Ir para a fase atual (${statusById[inc.status].name})</a><span></span>
+            <button class="btn primary" data-status="${view}">${vi > cur ? 'Avançar' : 'Voltar'} o incidente para ${statusById[view].name}</button>`}
+      </div>` : ''}
+      ${summaryStrip(inc, db)}
+      ${isPhase && view !== 'encerrado' ? phaseIntro(inc, view) : ''}
+      ${PHASE_VIEW[view](inc, db)}
     </div>`;
   },
 
-  mount(el, [id, tab = 'visao'], ctx) {
-    tab = ALIAS[tab] || tab;
+  mount(el, [id, tab = ''], ctx) {
     const db = store.get();
     const inc = store.incident(id);
     if (!inc) return;
+    tab = viewOf(inc, tab);
     const save = async (msg, rerender = true) => { if (msg) await store.logChange(inc, msg); else { store.recompute(inc); store.persist(); } if (rerender) ctx.rerender(); };
+
+    // Registro rápido da fase (texto + anexos opcionais).
+    el.addEventListener('submit', async (e) => {
+      const f = e.target.closest('[data-quicklog]'); if (!f) return;
+      e.preventDefault();
+      const text = f.text.value.trim(); if (!text) return;
+      const metas = await storeFiles([...f._files.files], 'timeline');
+      await store.addTimeline(inc, { type: 'acao', text, phase: f.dataset.quicklog, files: metas.map((m) => m.sha256), fileIds: metas.map((m) => m.id) });
+      store.audit('Registro na linha do tempo', inc.id, f.dataset.quicklog); store.persist(); toast('Registrado.'); ctx.rerender();
+    });
 
     // Campos ligados.
     el.addEventListener('change', async (e) => {
@@ -507,7 +551,7 @@ export default {
         if (inc.containedAt && !inc.csf['RS.MI-01']?.done) inc.csf['RS.MI-01'] = { done: true, at: now, note: 'Registrado na mudança de fase' };
         if (inc.eradicatedAt && !inc.csf['RS.MI-02']?.done) inc.csf['RS.MI-02'] = { done: true, at: now, note: 'Registrado na mudança de fase' };
         if (inc.triagedAt && !inc.csf['RS.MA-02']?.done) inc.csf['RS.MA-02'] = { done: true, at: now, note: 'Registrado na mudança de fase' };
-        store.persist(); ctx.rerender();
+        store.persist(); ctx.go(`#/incidente/${inc.id}/${to}`);
         toast(`Fase: ${statusById[to].name}${warns.length ? ` · ${warns.length} pendência(s) para revisar` : ''}`, warns.length ? 'warn' : 'ok');
         return;
       }
@@ -716,7 +760,7 @@ export default {
     drop?.addEventListener('dragleave', () => drop.classList.remove('over'));
     drop?.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); addAndRender([...e.dataTransfer.files]); });
     const onPaste = (e) => {
-      if (tab !== 'linha' || e.target.closest?.('input,textarea')) return;
+      if (tab !== 'cronologia' || e.target.closest?.('input,textarea')) return;
       const files = [...(e.clipboardData?.files || [])].map((f, n) => (f.name && f.name !== 'image.png' ? f : new File([f], `captura-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}${n ? '-' + n : ''}.png`, { type: f.type })));
       if (files.length) { e.preventDefault(); addAndRender(files); }
     };

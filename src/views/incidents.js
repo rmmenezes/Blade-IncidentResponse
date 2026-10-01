@@ -10,13 +10,6 @@ import { art } from '../art.js';
 import { raw } from '../core/util.js';
 import { ic, toast, confirmBox, sevBadge, statusBadge, when, field, input, dt, textarea, select, formData, empty, bar, tlpBadge } from '../ui.js';
 
-// Abas compartilhadas entre Incidentes e a fila de eventos adversos.
-export function sectionTabs(cur, db) {
-  const pend = db.events.filter((e) => e.status === 'novo' || e.status === 'analise').length;
-  return html`<nav class="tabs"><a class="tab ${cur === 'incidentes' ? 'on' : ''}" href="#/incidentes">${ic('alert')} Incidentes</a>
-    <a class="tab ${cur === 'eventos' ? 'on' : ''}" href="#/eventos">${ic('radar')} Fila de eventos${pend ? html` <em>${pend}</em>` : ''}</a></nav>`;
-}
-
 export function playbookTasks(pbId) {
   const pb = playbookById[pbId];
   return pb ? pb.steps.map((s, n) => ({ id: `pb-${pbId}-${n}-${Math.random().toString(36).slice(2, 6)}`, title: s.title, detail: s.detail, role: s.role, phase: s.phase, csf: s.csf, owner: '', due: null, status: 'aberta', playbook: pbId })) : [];
@@ -77,7 +70,6 @@ export default {
           <a class="btn primary" href="#/incidentes/novo">${ic('plus')} Declarar incidente</a>
         </div>
       </div>
-      ${sectionTabs('incidentes', db)}
       <div class="filters">
         <div class="seg"><a class="${view === 'lista' ? 'on' : ''}" href="${link('v', '')}">${ic('list')} Lista</a><a class="${view === 'quadro' ? 'on' : ''}" href="${link('v', 'quadro')}">${ic('board')} Quadro</a></div>
         <select data-filter="status">${[{ v: '', t: 'Todos os estados' }, ...STATUSES.map((s) => ({ v: s.id, t: s.name }))].map((o) => html`<option value="${o.v}" ${o.v === fs ? 'selected' : ''}>${o.t}</option>`)}</select>

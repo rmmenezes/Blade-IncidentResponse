@@ -34,7 +34,6 @@ export default {
           <p class="muted">${open.length ? `${open.length} incidente(s) em andamento${critical ? `, ${critical} de alta severidade` : ''}.` : 'Nenhum incidente em andamento. Bom momento para revisar playbooks e treinar a equipe.'}</p>
           <div class="row">
             <a class="btn primary lg" href="#/incidentes/novo">${ic('alert')} Declarar incidente</a>
-            <a class="btn lg" href="#/eventos">${ic('radar')} Registrar evento</a>
           </div>
         </div>
         <div class="hero-art">${raw(art('shield'))}</div>
@@ -43,7 +42,7 @@ export default {
       <div class="stats">
         <a class="stat" href="#/incidentes"><span class="stat-ic">${ic('alert')}</span><div><strong>${open.length}</strong><span>incidentes abertos</span></div></a>
         <a class="stat ${critical ? 'hot' : ''}" href="#/incidentes?sev=S1"><span class="stat-ic">${ic('shield')}</span><div><strong>${critical}</strong><span>críticos ou altos</span></div></a>
-        <a class="stat" href="#/eventos"><span class="stat-ic">${ic('radar')}</span><div><strong>${pending}</strong><span>eventos para triar</span></div></a>
+        <a class="stat" href="#/atribuicoes"><span class="stat-ic">${ic('check')}</span><div><strong>${open.reduce((n, i) => n + i.tasks.filter((t) => t.status !== 'concluida').length, 0)}</strong><span>tarefas abertas</span></div></a>
         <a class="stat ${risks.length ? 'hot' : ''}" href="#/relatorios/regulatorio"><span class="stat-ic">${ic('clock')}</span><div><strong>${risks.length}</strong><span>prazos em risco</span></div></a>
       </div>
 

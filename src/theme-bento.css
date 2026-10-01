@@ -192,3 +192,50 @@ dialog.modal { border: 0; border-radius: 28px; }
 .type-opt { overflow-wrap: normal; word-break: normal; hyphens: manual; }
 .task-mini a, .list li > a { color: var(--tx); font-weight: 700; }
 .task-mini a:hover { color: var(--acc); }
+
+/* Ocupa toda a largura disponível */
+.page, .prose, .report, .reader { max-width: none; }
+.page.narrow { max-width: 1200px; }
+.home-grid { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+
+/* Fases como navegação do incidente */
+.phase-steps { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; background: transparent; box-shadow: none; border-radius: 0; overflow: visible; margin: 6px 0 14px; }
+.phase-steps li { min-width: 0; }
+.phase-steps a { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 14px 14px 12px; border-radius: 22px; background: var(--panel); color: var(--tx2); box-shadow: var(--shadow); text-decoration: none; transition: transform .15s, background .15s; }
+.phase-steps a:hover { transform: translateY(-2px); color: var(--tx); text-decoration: none; }
+.phase-steps a > span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 10px; background: var(--panel2); color: var(--tx2); font-weight: 800; font-size: .8rem; }
+.phase-steps a b { font-size: .92rem; color: var(--tx); }
+.phase-steps a small { font-size: .72rem; color: var(--tx3); font-weight: 600; }
+.phase-steps .past a > span { background: var(--mint); color: var(--pastel-tx); }
+.phase-steps .cur a > span { background: var(--btn); color: var(--btn-tx); }
+.phase-steps .cur a small { color: var(--acc); }
+.phase-steps .view a { background: var(--peach); color: var(--pastel-tx); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 55%, transparent); }
+.phase-steps .view a b, .phase-steps .view a small { color: var(--pastel-tx); }
+.phase-nav { grid-template-columns: auto 1fr auto; margin: 0 0 14px; }
+.phase-intro { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px; margin-bottom: 16px; }
+.pi-main, .pi-nist { background: var(--panel); border-radius: var(--r); padding: 22px 24px; box-shadow: var(--shadow); }
+.pi-main h2 { font-size: 1.6rem; margin: 0 0 6px; }
+.pi-nist { background: color-mix(in srgb, var(--lilac) 45%, var(--panel)); }
+.pi-nist .csfchk { font-size: .84rem; }
+.quicklog { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.quicklog textarea { background: var(--panel2); }
+.pi-log { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pi-log li { display: grid; grid-template-columns: 120px 1fr; gap: 10px; font-size: .84rem; padding: 8px 12px; border-radius: 12px; background: var(--panel2); }
+.pi-log time { color: var(--tx3); font-variant-numeric: tabular-nums; }
+.summary-strip .sla-late { background: color-mix(in srgb, var(--rose) 55%, var(--panel)); }
+.summary-strip .sla-ok { background: color-mix(in srgb, var(--mint) 55%, var(--panel)); }
+.closing { display: grid; grid-template-columns: 140px 1fr; gap: 24px; align-items: center; background: linear-gradient(135deg, var(--mint), var(--sky)); color: var(--pastel-tx); }
+.closing .muted { color: color-mix(in srgb, var(--pastel-tx) 70%, transparent); }
+.closing-art { width: 130px; height: 130px; color: #fff; }
+.sla-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.sla-box { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 18px; }
+.sla-box span { display: flex; align-items: center; gap: 6px; font-weight: 700; }
+.sla-box input { width: 90px; background: rgba(255,255,255,.7); }
+@media (max-width: 1200px) { .phase-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 860px) {
+  .phase-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .phase-intro { grid-template-columns: 1fr; }
+  .closing { grid-template-columns: 1fr; } .closing-art { display: none; }
+  .sla-grid { grid-template-columns: repeat(2, 1fr); }
+  .pi-log li { grid-template-columns: 1fr; }
+}

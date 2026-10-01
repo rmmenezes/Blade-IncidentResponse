@@ -33,12 +33,8 @@ export function computeSeverity(inc, assets = []) {
 }
 
 /* ---------- SLAs por severidade ---------- */
-export const DEFAULT_SLA = {
-  S1: { triage: 0.5, contain: 4, recover: 24 },
-  S2: { triage: 2, contain: 12, recover: 72 },
-  S3: { triage: 8, contain: 48, recover: 168 },
-  S4: { triage: 24, contain: 120, recover: 336 },
-};
+// SLA único: prazo (em horas, a partir da declaração) para conter o incidente.
+export const DEFAULT_SLA = { S1: { contain: 4 }, S2: { contain: 12 }, S3: { contain: 48 }, S4: { contain: 120 } };
 
 export function slaStatus(inc, sla, now = new Date()) {
   const s = sla[inc.severity] || DEFAULT_SLA[inc.severity] || DEFAULT_SLA.S4;
@@ -51,9 +47,7 @@ export function slaStatus(inc, sla, now = new Date()) {
     return { key, label, due, doneAt, done, late, remaining: new Date(due) - now };
   };
   return [
-    item('triage', 'Triagem', inc.triagedAt, s.triage),
     item('contain', 'Contenção', inc.containedAt, s.contain),
-    item('recover', 'Recuperação', inc.recoveredAt, s.recover),
   ];
 }
 
@@ -65,17 +59,10 @@ export const DEFAULT_REGULATIONS = [
     note: 'Res. CD/ANPD nº 15/2024: 3 dias úteis a partir do conhecimento de que o incidente afetou dados pessoais com risco ou dano relevante.' },
   { id: 'lgpd-titulares', name: 'LGPD — Comunicação aos titulares', authority: 'Titulares dos dados', unit: 'bd', amount: 3, trigger: 'awareAt', when: 'personal', enabled: true,
     note: 'Res. CD/ANPD nº 15/2024: mesmo prazo de 3 dias úteis, em linguagem clara.' },
-  { id: 'gdpr', name: 'GDPR — Art. 33', authority: 'Autoridade supervisora (UE)', unit: 'h', amount: 72, trigger: 'awareAt', when: 'personal', enabled: false,
-    note: 'Até 72 horas após tomar conhecimento da violação de dados pessoais.' },
-  { id: 'nis2-early', name: 'NIS2 — Alerta antecipado', authority: 'CSIRT / autoridade competente (UE)', unit: 'h', amount: 24, trigger: 'awareAt', when: 'significant', enabled: false,
-    note: 'Alerta antecipado em 24 h; notificação em 72 h; relatório final em 1 mês.' },
-  { id: 'nis2-notif', name: 'NIS2 — Notificação do incidente', authority: 'CSIRT / autoridade competente (UE)', unit: 'h', amount: 72, trigger: 'awareAt', when: 'significant', enabled: false, note: '' },
-  { id: 'nis2-final', name: 'NIS2 — Relatório final', authority: 'CSIRT / autoridade competente (UE)', unit: 'm', amount: 1, trigger: 'awareAt', when: 'significant', enabled: false, note: '' },
-  { id: 'sec-8k', name: 'SEC — Form 8-K Item 1.05', authority: 'SEC (EUA)', unit: 'bd', amount: 4, trigger: 'materialAt', when: 'material', enabled: false,
-    note: '4 dias úteis após a determinação de materialidade (empresas listadas nos EUA).' },
-  { id: 'certbr', name: 'CERT.br / CSIRT setorial', authority: 'CERT.br', unit: 'h', amount: 24, trigger: 'declaredAt', when: 'always', enabled: false,
-    note: 'Compartilhamento voluntário/recomendado; ajuste o prazo conforme a política interna.' },
+  { id: 'certbr', name: 'CERT.br — Notificação do incidente', authority: 'CERT.br', unit: 'h', amount: 24, trigger: 'declaredAt', when: 'always', enabled: true,
+    note: 'Notificação recomendada ao CSIRT nacional (cert@cert.br). Ajuste o prazo conforme a política interna.' },
 ];
+export const REGULATION_IDS = DEFAULT_REGULATIONS.map((r) => r.id);
 
 export const CONDITIONS = {
   always: 'Todo incidente declarado',

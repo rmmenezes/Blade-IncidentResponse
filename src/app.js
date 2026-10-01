@@ -4,7 +4,6 @@ import { html, esc } from './core/util.js';
 import { ic, toast } from './ui.js';
 import { demoDB } from './data/seed.js';
 import dashboard from './views/dashboard.js';
-import events from './views/events.js';
 import incidents from './views/incidents.js';
 import incident from './views/incident.js';
 import report from './views/report.js';
@@ -23,7 +22,7 @@ import { NIST_LINKS } from './core/nist.js';
 
 const NAV = [
   { href: '#/', label: 'Início', icon: 'dash' },
-  { href: '#/incidentes', match: ['/incidente', '/eventos'], label: 'Incidentes', icon: 'alert', badge: (db) => db.incidents.filter((i) => i.status !== 'encerrado').length },
+  { href: '#/incidentes', match: ['/incidente'], label: 'Incidentes', icon: 'alert', badge: (db) => db.incidents.filter((i) => i.status !== 'encerrado').length },
   { href: '#/biblioteca', match: ['/biblioteca', '/livro'], label: 'Biblioteca', icon: 'book' },
   { href: '#/relatorios', label: 'Relatórios', icon: 'chart' },
   { href: '#/organizacao', match: ['/organizacao', '/atribuicoes'], label: 'Áreas e organização', icon: 'users' },
@@ -34,12 +33,12 @@ const NAV = [
 const REDIRECTS = [
   [/^\/playbooks\/([a-z-]+)$/, (m) => `#/livro/pb-${m[1]}`], [/^\/playbooks$/, () => '#/biblioteca'],
   [/^\/biblioteca\/(tecnologias|processos)$/, (m) => `#/organizacao/${m[1]}`], [/^\/biblioteca\/procedimentos$/, () => '#/biblioteca?f=procedimento'],
+  [/^\/eventos$/, () => '#/incidentes'],
   [/^\/preparacao(?:\/([a-z-]+))?$/, (m) => `#/organizacao/${m[1] || 'prontidao'}`], [/^\/melhorias$/, () => '#/organizacao/melhorias'],
 ];
 
 const ROUTES = [
   [/^\/$/, dashboard],
-  [/^\/eventos$/, events],
   [/^\/incidentes(?:\/(novo))?$/, incidents],
   [/^\/incidente\/([^/]+)\/relatorio$/, report],
   [/^\/incidente\/([^/]+)(?:\/([a-z-]+))?$/, incident],
@@ -74,7 +73,7 @@ function renderNav(path) {
 let cleanup = null;
 export async function route() {
   const [rawPath, qs = ''] = (location.hash.slice(1) || '/').split('?');
-  const path = decodeURIComponent(rawPath || '/');
+  const path = decodeURIComponent(rawPath || '/').replace(/(.)\/$/, '$1');
   ctx.query = new URLSearchParams(qs);
   document.body.classList.remove('nav-open');
   if (!store.get()) {
@@ -165,7 +164,6 @@ q.addEventListener('input', () => {
       hits.push({ href: `#/incidente/${i.id}`, label: `${i.id} — ${i.title}`, sub: iocHit ? `IOC: ${iocHit.value}` : i.category });
     }
   }
-  for (const e of db.events) if (e.id.toLowerCase().includes(t) || e.title.toLowerCase().includes(t)) hits.push({ href: '#/eventos', label: `${e.id} — ${e.title}`, sub: 'Evento adverso' });
   for (const a of db.assets) if (a.name.toLowerCase().includes(t) || (a.ip || '').includes(t)) hits.push({ href: '#/organizacao/ativos', label: a.name, sub: `Ativo · ${a.type}` });
   results.innerHTML = hits.length
     ? hits.slice(0, 12).map((h) => `<a href="${esc(h.href)}"><strong>${esc(h.label)}</strong><small>${esc(h.sub)}</small></a>`).join('')

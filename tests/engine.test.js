@@ -40,13 +40,13 @@ test('prazos regulatórios LGPD e estados', () => {
   assert.equal(notificationStatus(inc, regs, new Date(2026, 9, 9)).find((n) => n.reg.id === 'lgpd-anpd').state, 'atrasada');
   inc.notifications = [{ regId: 'lgpd-anpd', sentAt: new Date(2026, 9, 7).toISOString() }];
   assert.equal(notificationStatus(inc, regs, new Date(2026, 9, 9)).find((n) => n.reg.id === 'lgpd-anpd').state, 'enviada');
-  assert.equal(notificationStatus({ ...inc, personalData: false }, regs).length, 0);
+  assert.deepEqual(notificationStatus({ ...inc, personalData: false }, regs).map((n) => n.reg.id), ['certbr']);
 });
 
-test('SEC conta a partir da materialidade', () => {
-  const reg = DEFAULT_REGULATIONS.find((r) => r.id === 'sec-8k');
-  const d = new Date(dueDate(reg, new Date(2026, 9, 1, 10).toISOString())); // quinta
-  assert.equal(d.getDate(), 7);
+test('CERT.br: 24 horas a partir da declaração', () => {
+  const reg = DEFAULT_REGULATIONS.find((r) => r.id === 'certbr');
+  assert.equal(new Date(dueDate(reg, '2026-10-01T10:00:00.000Z')).toISOString(), '2026-10-02T10:00:00.000Z');
+  assert.deepEqual(DEFAULT_REGULATIONS.map((r) => r.id), ['lgpd-anpd', 'lgpd-titulares', 'certbr']);
 });
 
 test('transições preenchem marcos pulados', () => {
@@ -80,7 +80,7 @@ test('SLA marca atraso', () => {
   const inc = { severity: 'S1', declaredAt: '2026-01-01T00:00:00Z' };
   const s = slaStatus(inc, DEFAULT_SLA, new Date('2026-01-01T05:00:00Z'));
   assert.equal(s.find((x) => x.key === 'contain').late, true);
-  assert.equal(s.find((x) => x.key === 'recover').late, false);
+  assert.equal(s.length, 1);
 });
 
 test('html escapa interpolações', () => {

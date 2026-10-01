@@ -27,22 +27,19 @@ export default {
       </form>
 
       <form class="card" id="sla">
-        <h2>SLAs por severidade (horas a partir da declaração)</h2>
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>Severidade</th><th>Triagem</th><th>Contenção</th><th>Recuperação</th></tr></thead>
-          <tbody>${SEVERITIES.map((s) => html`<tr><td>${s.id} · ${s.name}</td>${['triage', 'contain', 'recover'].map((k) => html`<td><input type="number" step="0.25" min="0" name="${s.id}.${k}" value="${db.sla[s.id][k]}" aria-label="${s.id} ${k}"></td>`)}</tr>`)}</tbody></table></div>
+        <h2>SLA de contenção</h2>
+        <p class="small muted">Horas, a partir da declaração, para conter o incidente.</p>
+        <div class="sla-grid">${SEVERITIES.map((s) => html`<label class="sla-box sev-${s.id}"><b>${s.id} · ${s.name}</b><span><input type="number" step="0.5" min="0" name="${s.id}.contain" value="${db.sla[s.id].contain}" aria-label="${s.id}"> h</span></label>`)}</div>
         <button class="btn primary">Salvar SLAs</button>
       </form>
 
       <section class="card">
-        <div class="card-head"><h2>Regras de notificação regulatória (RS.CO-02)</h2><button class="btn sm" data-act="reg-add">${ic('plus')} Nova regra</button></div>
+        <div class="card-head"><h2>Notificações obrigatórias (RS.CO-02)</h2></div>
         <p class="small muted">Os padrões são referências; confirme prazos e aplicabilidade com o jurídico para sua organização e setor.</p>
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>Ativa</th><th>Obrigação</th><th>Prazo</th><th>Contagem a partir de</th><th>Aplica-se quando</th><th></th></tr></thead>
+        <div class="table-wrap"><table class="tbl"><thead><tr><th>Ativa</th><th>Obrigação</th><th>Prazo</th></tr></thead>
           <tbody>${db.regulations.map((r) => html`<tr><td><input type="checkbox" data-reg="${r.id}" data-k="enabled" ${r.enabled ? 'checked' : ''} aria-label="Ativa"></td>
-            <td><b>${r.name}</b><br><small class="muted">${r.authority}${r.note ? ' — ' + r.note : ''}</small></td>
-            <td class="nowrap"><input type="number" min="0" style="width:70px" value="${r.amount}" data-reg="${r.id}" data-k="amount" aria-label="Prazo"> ${select('', UNITS, r.unit, `data-reg="${r.id}" data-k="unit" aria-label="Unidade"`)}</td>
-            <td>${select('', TRIGGERS, r.trigger, `data-reg="${r.id}" data-k="trigger" aria-label="Início"`)}</td>
-            <td>${select('', Object.entries(CONDITIONS).map(([v, t]) => ({ v, t })), r.when, `data-reg="${r.id}" data-k="when" aria-label="Condição"`)}</td>
-            <td>${r.custom ? html`<button class="icon-btn" data-reg-del="${r.id}" aria-label="Remover">${ic('x')}</button>` : ''}</td></tr>`)}</tbody></table></div>
+            <td><b>${r.name}</b><br><small class="muted">${r.note}</small></td>
+            <td class="nowrap"><input type="number" min="0" style="width:70px" value="${r.amount}" data-reg="${r.id}" data-k="amount" aria-label="Prazo"> ${r.unit === 'bd' ? 'dias úteis' : 'horas'}</td></tr>`)}</tbody></table></div>
       </section>
 
       <section class="card">
@@ -103,15 +100,6 @@ export default {
         await clearFiles().catch(() => {});
         location.hash = '#/'; location.reload();
       }
-      if (d.regDel) { db.regulations = db.regulations.filter((r) => r.id !== d.regDel); store.persist(); ctx.rerender(); }
-      if (d.act === 'reg-add') modal('Nova regra de notificação', html`<div class="form-grid">
-        <div class="span2">${field('Nome', input('name', '', 'required placeholder="Ex.: Regulador setorial"'))}</div>
-        ${field('Destinatário', input('authority', '', 'required'))}${field('Prazo', input('amount', '24', 'type="number" min="0" required'))}
-        ${field('Unidade', select('unit', UNITS, 'h'))}${field('Contagem a partir de', select('trigger', TRIGGERS, 'awareAt'))}
-        ${field('Aplica-se quando', select('when', Object.entries(CONDITIONS).map(([v, t]) => ({ v, t })), 'always'))}
-        <div class="span2">${field('Observação', input('note', ''))}</div></div>`, {
-        onSubmit: (f) => { db.regulations.push({ id: uid('r'), enabled: true, custom: true, ...f }); store.audit('Regra de notificação criada', f.name); store.persist(); ctx.rerender(); },
-      });
     });
   },
 };

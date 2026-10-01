@@ -70,13 +70,6 @@ function playbookChapters(p, db) {
         <div class="bk-tags"><span class="bk-role">${role(s.role)}</span>${csfTag(s.csf)}</div></div></li>`; })}</ol>
       ${ph.evidence.length ? html`<div class="bk-box"><h4>Evidências a coletar</h4>${list(ph.evidence)}</div>` : ''}
       ${ph.decisions.length ? html`<div class="bk-callout warn"><h4>Pontos de decisão</h4>${list(ph.decisions)}</div>` : ''}` })),
-    { id: 'comunicacao', title: 'Comunicação', body: html`<table class="bk-tbl"><thead><tr><th>Público</th><th>Quando</th><th>Conteúdo</th></tr></thead>
-      <tbody>${p.comms.map(([a, w, c]) => html`<tr><td><b>${a}</b></td><td>${w}</td><td>${c}</td></tr>`)}</tbody></table>
-      <p class="bk-muted">Modelos de mensagem estão disponíveis na aba Comunicação de cada incidente.</p>` },
-    { id: 'indicadores', title: 'Indicadores e técnicas', body: html`<h3>Sinais típicos</h3>${list(p.indicators)}
-      <h3>Técnicas MITRE ATT&CK relacionadas</h3><table class="bk-tbl"><tbody>${p.mitre.map(([id, name]) => html`<tr><td class="bk-mono"><a href="https://attack.mitre.org/techniques/${id.replace('.', '/')}/">${id}</a></td><td>${name}</td></tr>`)}</tbody></table>` },
-    { id: 'checklist', title: 'Checklist de encerramento', body: html`<ul class="bk-check">${p.checklist.map((x) => html`<li>${x}</li>`)}</ul>
-      <h3>Métricas recomendadas</h3>${list(p.metrics)}` },
     { id: 'referencias', title: 'Referências', body: refs(p.references) },
   ];
   return ch;
@@ -108,8 +101,8 @@ function planChapters(db) {
       <tbody>${db.contacts.map((c) => html`<tr><td><b>${c.name}</b>${c.external ? ' · externa' : ''}</td><td>${role(c.role)}</td><td>${c.email || ''}<br>${c.phone || ''}</td></tr>`)}</tbody></table>` : html`<p class="bk-muted">Cadastre as áreas em Organização → Áreas.</p>` },
     { id: 'severidade', title: 'Classificação e severidade', body: html`<p>A prioridade combina quatro fatores (0 a 3 cada) e a criticidade dos ativos afetados:</p>
       <table class="bk-tbl"><tbody>${Object.values(FACTORS).map((f) => html`<tr><td><b>${f.label}</b></td><td>${f.opts.map((o, i) => `${i} — ${o}`).join(' · ')}</td></tr>`)}</tbody></table>
-      <table class="bk-tbl"><thead><tr><th>Severidade</th><th>Pontuação</th><th>Triagem</th><th>Contenção</th><th>Recuperação</th></tr></thead>
-      <tbody>${SEVERITIES.map((s) => { const x = db.sla[s.id] || DEFAULT_SLA[s.id]; return html`<tr><td><b>${s.id} · ${s.name}</b></td><td>≥ ${s.min}</td><td>${x.triage} h</td><td>${x.contain} h</td><td>${x.recover} h</td></tr>`; })}</tbody></table>` },
+      <table class="bk-tbl"><thead><tr><th>Severidade</th><th>Pontuação</th><th>SLA de contenção</th></tr></thead>
+      <tbody>${SEVERITIES.map((s) => { const x = db.sla[s.id] || DEFAULT_SLA[s.id]; return html`<tr><td><b>${s.id} · ${s.name}</b></td><td>≥ ${s.min}</td><td>${x.contain} h</td></tr>`; })}</tbody></table>` },
     { id: 'processos', title: 'Processos de resposta', body: html`${db.processes.map((p) => html`<div class="bk-box"><h4>${p.name} <small>v${p.version}</small></h4><p>${p.objective}</p>
       <p class="bk-muted">Dono: ${who(p.owner)?.name || '—'} · Entradas: ${p.inputs || '—'} · Saídas: ${p.outputs || '—'}</p></div>`)}` },
     { id: 'notificacao', title: 'Notificações obrigatórias', body: html`<table class="bk-tbl"><thead><tr><th>Obrigação</th><th>Prazo</th><th>Quando se aplica</th></tr></thead>
