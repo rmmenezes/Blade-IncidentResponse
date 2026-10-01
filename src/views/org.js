@@ -4,7 +4,6 @@ import { art } from '../art.js';
 import { ic } from '../ui.js';
 import prep from './prep.js';
 import library from './library.js';
-import improvements from './improvements.js';
 
 const TABS = [
   { id: 'equipe', label: 'Áreas', icon: 'users', view: prep },
@@ -13,7 +12,6 @@ const TABS = [
   { id: 'processos', label: 'Processos', icon: 'list', view: library },
   { id: 'prontidao', label: 'Prontidão', icon: 'shield', view: prep },
   { id: 'exercicios', label: 'Exercícios', icon: 'clock', view: prep },
-  { id: 'melhorias', label: 'Melhorias', icon: 'up', view: improvements },
 ];
 const ARTS = { equipe: 'team', ativos: 'plan', tecnologias: 'radar', processos: 'procedure', prontidao: 'shield', exercicios: 'restore', melhorias: 'report' };
 const DESC = {
@@ -23,7 +21,6 @@ const DESC = {
   processos: 'Como a resposta é organizada: donos, entradas, saídas e revisões.',
   prontidao: 'Autoavaliação da preparação para responder a incidentes.',
   exercicios: 'Simulações e testes que geram melhorias (ID.IM-02).',
-  melhorias: 'Ações de melhoria vindas de incidentes, testes e avaliações.',
 };
 
 const pick = (id) => TABS.find((t) => t.id === id) || TABS[0];

@@ -34,7 +34,8 @@ const REDIRECTS = [
   [/^\/playbooks\/([a-z-]+)$/, (m) => `#/livro/pb-${m[1]}`], [/^\/playbooks$/, () => '#/biblioteca'],
   [/^\/biblioteca\/(tecnologias|processos)$/, (m) => `#/organizacao/${m[1]}`], [/^\/biblioteca\/procedimentos$/, () => '#/biblioteca?f=procedimento'],
   [/^\/eventos$/, () => '#/incidentes'],
-  [/^\/preparacao(?:\/([a-z-]+))?$/, (m) => `#/organizacao/${m[1] || 'prontidao'}`], [/^\/melhorias$/, () => '#/organizacao/melhorias'],
+  [/^\/preparacao(?:\/([a-z-]+))?$/, (m) => `#/organizacao/${m[1] || 'prontidao'}`], [/^\/melhorias$/, () => '#/relatorios/melhorias'],
+  [/^\/organizacao\/melhorias$/, () => '#/relatorios/melhorias'],
 ];
 
 const ROUTES = [

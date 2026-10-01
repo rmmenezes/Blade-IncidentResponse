@@ -145,9 +145,11 @@ export async function setStatus(inc, to, note = '') {
   persist();
 }
 
-export async function logChange(inc, text, auditAction = 'Incidente atualizado') {
+// Alterações de rotina vão só para a auditoria; a linha do tempo guarda apenas fatos
+// relevantes do incidente (fases, registros, evidências, notificações).
+export async function logChange(inc, text, auditAction = 'Incidente atualizado', { timeline = false } = {}) {
   recompute(inc);
-  await addTimeline(inc, { type: 'sistema', text });
+  if (timeline) await addTimeline(inc, { type: 'sistema', text });
   audit(auditAction, inc.id, text);
   persist();
 }

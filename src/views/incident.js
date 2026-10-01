@@ -308,7 +308,6 @@ function tabLicoes(inc, db) {
     <section class="card">
       <div class="card-head"><h2>Melhorias geradas</h2><button class="btn sm primary" data-act="imp-add">${ic('plus')} Registrar melhoria</button></div>
       ${imps.length ? html`<ul class="list">${imps.map((p) => html`<li><b>${p.title}</b><span class="muted">${p.csf} · ${p.status} · ${contactName(db, p.owner) || 'sem responsável'}</span></li>`)}</ul>` : empty('Nenhuma melhoria registrada a partir deste incidente.')}
-      <p class="small muted">As melhorias ficam no <a href="#/organizacao/melhorias">backlog de melhorias</a> e alimentam Governar, Identificar e Proteger.</p>
     </section>
   </div>`;
 }
@@ -339,21 +338,6 @@ const PHASE_VIEW = {
   encerrado: (i, db) => closingView(i, db),
   cronologia: (i, db) => html`${tabLinha(i, db)}${tabAnexos(i, db)}`,
 };
-
-// Faixa de resumo exibida em todas as telas do incidente.
-function summaryStrip(inc, db) {
-  const sla = slaStatus(inc, db.sla)[0];
-  const lead = contactName(db, inc.roles.lead);
-  const openTasks = inc.tasks.filter((t) => t.status !== 'concluida');
-  const reqOpen = openTasks.filter((t) => t.required).length;
-  return html`<div class="summary-strip">
-      <div><span>Coordenação</span><b>${lead || '—'}</b></div>
-      <div><span>Tarefas abertas</span><b>${openTasks.length}${reqOpen ? html` <small class="txt-late">(${reqOpen} obrigatórias)</small>` : ''}</b></div>
-      <div class="${sla ? (sla.late ? 'sla-late' : sla.done ? 'sla-ok' : '') : ''}"><span>SLA de contenção</span><b>${!sla ? '—' : sla.done ? (sla.late ? 'cumprido com atraso' : 'cumprido') : sla.late ? `atrasado ${fmtDuration(-sla.remaining)}` : `restam ${fmtDuration(sla.remaining)}`}</b></div>
-      <div><span>Declarado há</span><b>${fmtDuration(Date.now() - new Date(inc.declaredAt))}</b></div>
-      <div><span>Arquivos</span><b>${inc.attachments.length}</b></div>
-    </div>`;
-}
 
 // Cartão de abertura da fase: objetivo, boas práticas NIST e registro rápido.
 function phaseIntro(inc, view) {
@@ -386,12 +370,11 @@ function closingView(inc, db) {
         <div class="row"><a class="btn primary" href="#/incidente/${inc.id}/relatorio">${ic('print')} Relatório final</a><button class="btn" data-act="pkg">${ic('down')} Pacote do incidente</button><a class="btn" href="#/incidente/${inc.id}/cronologia">${ic('clock')} Cronologia</a></div></div>
     </section>
     <div class="stats">
-      <div class="stat"><span class="stat-ic">${ic('shield')}</span><div><strong>${p.pct}%</strong><span>aderência ao NIST CSF</span></div></div>
+      <div class="stat"><span class="stat-ic">${ic('list')}</span><div><strong>${inc.timeline.length}</strong><span>registros na linha do tempo</span></div></div>
       <div class="stat"><span class="stat-ic">${ic('check')}</span><div><strong>${inc.tasks.filter((t) => t.status === 'concluida').length}/${inc.tasks.length}</strong><span>tarefas concluídas</span></div></div>
       <div class="stat"><span class="stat-ic">${ic('clock')}</span><div><strong>${fmtDuration(durs.reduce((a, d) => a + d.ms, 0))}</strong><span>duração total</span></div></div>
       <div class="stat"><span class="stat-ic">${ic('file')}</span><div><strong>${inc.evidence.length + inc.attachments.length}</strong><span>evidências e arquivos</span></div></div>
     </div>
-    ${tabNist(inc)}
     <p class="right small"><button class="btn ghost sm danger-link" data-act="delete">${ic('trash')} Excluir incidente</button></p>`;
 }
 
@@ -438,7 +421,6 @@ export default {
           : html`<a class="btn" href="#/incidente/${inc.id}/${inc.status}">Ir para a fase atual (${statusById[inc.status].name})</a><span></span>
             <button class="btn primary" data-status="${view}">${vi > cur ? 'Avançar' : 'Voltar'} o incidente para ${statusById[view].name}</button>`}
       </div>` : ''}
-      ${summaryStrip(inc, db)}
       ${isPhase && view !== 'encerrado' ? phaseIntro(inc, view) : ''}
       ${PHASE_VIEW[view](inc, db)}
     </div>`;
@@ -449,7 +431,8 @@ export default {
     const inc = store.incident(id);
     if (!inc) return;
     tab = viewOf(inc, tab);
-    const save = async (msg, rerender = true) => { if (msg) await store.logChange(inc, msg); else { store.recompute(inc); store.persist(); } if (rerender) ctx.rerender(); };
+    // keep = true registra também na linha do tempo (apenas fatos relevantes).
+    const save = async (msg, rerender = true, keep = false) => { if (msg) await store.logChange(inc, msg, 'Incidente atualizado', { timeline: keep }); else { store.recompute(inc); store.persist(); } if (rerender) ctx.rerender(); };
 
     // Registro rápido da fase (texto + anexos opcionais).
     el.addEventListener('submit', async (e) => {
@@ -588,7 +571,7 @@ export default {
         const a = inc.attachments.find((x) => x.id === d.fileDel);
         if (!(await confirmBox('Remover arquivo', `Remover "${a.name}"? O registro na linha do tempo (com o hash) é mantido.`, { danger: true }))) return;
         await deleteFile(a.id).catch(() => {}); inc.attachments = inc.attachments.filter((x) => x.id !== a.id);
-        return save(`Arquivo removido: ${a.name} (SHA-256 ${a.sha256.slice(0, 16)}…)`);
+        return save(`Arquivo removido: ${a.name} (SHA-256 ${a.sha256.slice(0, 16)}…)`, true, true);
       }
       if (d.act === 'delete' && await confirmBox('Excluir incidente', `Excluir ${inc.id} permanentemente? Exporte antes se precisar manter o registro.`, { danger: true, label: 'Excluir' })) {
         db.incidents = db.incidents.filter((x) => x.id !== inc.id);
@@ -646,7 +629,7 @@ export default {
             const file = form.querySelector('#evfile').files[0];
             const { keep, ...ev } = f;
             if (file && keep) { const [m] = await storeFiles([file], 'evidence', false); ev.fileId = m.id; }
-            inc.evidence.push({ id: uid('e'), custody: [], ...ev }); if (!inc.csf['RS.AN-07']?.done) inc.csf['RS.AN-07'] = { done: true, at: new Date().toISOString(), note: 'Evidência registrada' }; return save(`Evidência registrada: ${f.name} (${f.hashAlg} ${f.hash || 'sem hash'})`); },
+            inc.evidence.push({ id: uid('e'), custody: [], ...ev }); if (!inc.csf['RS.AN-07']?.done) inc.csf['RS.AN-07'] = { done: true, at: new Date().toISOString(), note: 'Evidência registrada' }; return save(`Evidência registrada: ${f.name} (${f.hashAlg} ${f.hash || 'sem hash'})`, true, true); },
         });
         dlg.querySelector('#evfile').addEventListener('change', async (ev) => {
           const file = ev.target.files[0]; if (!file) return;
@@ -662,11 +645,11 @@ export default {
         modal(`Transferir custódia — ${ev.name}`, html`<div class="form-grid">
           ${field('De', input('from', last, 'required'))}${field('Para', input('to', '', 'required'))}
           ${field('Data', dt('at', new Date().toISOString()))}${field('Finalidade', input('purpose', '', 'required'))}</div>`, {
-          onSubmit: (f) => { ev.custody = [...(ev.custody || []), f]; return save(`Custódia de "${ev.name}": ${f.from} → ${f.to} (${f.purpose})`); },
+          onSubmit: (f) => { ev.custody = [...(ev.custody || []), f]; return save(`Custódia de "${ev.name}": ${f.from} → ${f.to} (${f.purpose})`, true, true); },
         });
       }
       if (d.evDel && await confirmBox('Remover evidência', 'O registro será removido (a linha do tempo mantém o histórico).', { danger: true })) {
-        const ev = inc.evidence.find((x) => x.id === d.evDel); inc.evidence = inc.evidence.filter((x) => x.id !== d.evDel); return save(`Evidência removida do inventário: ${ev.name}`);
+        const ev = inc.evidence.find((x) => x.id === d.evDel); inc.evidence = inc.evidence.filter((x) => x.id !== d.evDel); return save(`Evidência removida do inventário: ${ev.name}`, true, true);
       }
 
       if (d.act === 'ioc-add') {
@@ -701,14 +684,14 @@ export default {
             inc.notifications = inc.notifications.filter((n) => n.regId !== reg.id).concat({ regId: reg.id, ...f });
             inc.comms.push({ id: uid('m'), at: f.sentAt, audience: 'regulador', stakeholder: reg.authority, channel: 'Notificação formal', summary: `${reg.name}${f.ref ? ' · ' + f.ref : ''}`, csf: 'RS.CO-02' });
             inc.csf['RS.CO-02'] = { done: true, at: f.sentAt, note: reg.name };
-            return save(`Notificação enviada: ${reg.name}${f.ref ? ' (protocolo ' + f.ref + ')' : ''}`);
+            return save(`Notificação enviada: ${reg.name}${f.ref ? ' (protocolo ' + f.ref + ')' : ''}`, true, true);
           },
         });
       }
       if (d.notifWaive) {
         const reg = db.regulations.find((r) => r.id === d.notifWaive);
         modal(`Dispensar — ${reg.name}`, field('Justificativa (ex.: sem risco ou dano relevante, conforme avaliação do DPO)', textarea('reason', '', 'required rows="3"')), {
-          onSubmit: (f) => { inc.notifications = inc.notifications.filter((n) => n.regId !== reg.id).concat({ regId: reg.id, waived: true, reason: f.reason }); return save(`Notificação dispensada: ${reg.name} — ${f.reason}`); },
+          onSubmit: (f) => { inc.notifications = inc.notifications.filter((n) => n.regId !== reg.id).concat({ regId: reg.id, waived: true, reason: f.reason }); return save(`Notificação dispensada: ${reg.name} — ${f.reason}`, true, true); },
         });
       }
       if (d.notifUndo) { inc.notifications = inc.notifications.filter((n) => n.regId !== d.notifUndo); return save(`Registro de notificação desfeito: ${d.notifUndo}`); }
