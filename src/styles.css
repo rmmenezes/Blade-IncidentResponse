@@ -1,4 +1,4 @@
-/* Blade Incident Response — tema corporativo */
+/* Blade Incident Response — estilos base (o visual Bento fica em theme-bento.css) */
 :root {
   --bg: #0a0f1c; --bg2: #0e1526; --panel: #111a2e; --panel2: #16213a; --line: #1f2b45; --line2: #2a3858;
   --tx: #e5eaf3; --tx2: #9aa7bd; --tx3: #6b7892; --acc: #3b82f6; --acc2: #60a5fa; --acc-bg: rgba(59,130,246,.14); --link: #7cb0ff;

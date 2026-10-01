@@ -149,7 +149,7 @@ themeBtn.addEventListener('click', () => {
   try { localStorage.setItem('blade-theme', t); } catch { /* sem armazenamento */ }
   applyTheme(t);
 });
-applyTheme(document.documentElement.dataset.theme || 'dark');
+applyTheme(document.documentElement.dataset.theme || 'light');
 
 /* ---------- Busca global ---------- */
 const q = document.getElementById('q');

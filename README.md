@@ -43,6 +43,10 @@ O menu tem 6 itens: **Início, Incidentes, Biblioteca, Relatórios, Organizaçã
 - 9 relatórios com filtro de período, PDF e CSV.
 - Organização: áreas, ativos, tecnologias (cobertura por Função do CSF), processos, prontidão, exercícios e melhorias.
 
+## Visual
+
+Tema **Bento**: blocos grandes, cores pastel, cantos arredondados e fonte Plus Jakarta Sans, com modo claro (padrão) e escuro no botão de tema. Os estilos ficam em `src/theme-bento.css`.
+
 ## Dados e privacidade
 
 É uma aplicação estática, sem servidor: os registros ficam no `localStorage` e os arquivos no IndexedDB do navegador. Use **Configurações → Exportar tudo + arquivos** para backup e o **pacote do incidente** para compartilhar um caso com outra pessoa. Para uso multiusuário em produção, o próximo passo é criar um backend com autenticação.
